@@ -47,18 +47,18 @@ export default function Contact() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    const data = new FormData(form);
     // One free access key per Gmail address (Web3Forms free tier = 1 inbox per key;
     // the CC field is a paid feature). Get keys at https://web3forms.com — create
     // one with iamrollyparedes@gmail.com and one with rollyparedesva2@gmail.com.
     const keys = [
       process.env.NEXT_PUBLIC_WEB3FORMS_KEY_1 ?? "",
       process.env.NEXT_PUBLIC_WEB3FORMS_KEY_2 ?? "",
-    ].filter(Boolean);
-    const name = String(data.get("name") ?? "");
-    const email = String(data.get("email") ?? "");
-    const subject = String(data.get("subject") ?? "New message from portfolio");
-    const message = String(data.get("message") ?? "");
+    ].filter((k) => k && !k.startsWith("PASTE_"));
+    const formValues = new FormData(form);
+    const name = String(formValues.get("name") ?? "");
+    const email = String(formValues.get("email") ?? "");
+    const subject = String(formValues.get("subject") ?? "New message from portfolio");
+    const message = String(formValues.get("message") ?? "");
     const recipients = ["iamrollyparedes@gmail.com", "rollyparedesva2@gmail.com"];
 
     // No access keys yet → open the visitor's mail app as a fallback so nothing is lost.
@@ -80,21 +80,22 @@ export default function Contact() {
       setSendStep((s) => (s < SEND_STEPS.length - 1 ? s + 1 : s));
     }, 1200);
     try {
-      // Submit once per key so each inbox receives the message.
+      // Submit once per key (per the official Web3Forms docs: FormData body with
+      // access_key appended) so each inbox receives the message.
       for (const access_key of keys) {
+        const payload = new FormData();
+        payload.append("access_key", access_key);
+        payload.append("from_name", "Rolly Portfolio Contact Form");
+        payload.append("name", name);
+        payload.append("email", email);
+        payload.append("subject", `[Portfolio] ${subject}`);
+        payload.append("message", message);
+        payload.append("replyto", email);
+        payload.append("botcheck", "");
+
         const res = await fetch("https://api.web3forms.com/submit", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({
-            access_key,
-            from_name: "Rolly Portfolio Contact Form",
-            name,
-            email,
-            subject: `[Portfolio] ${subject}`,
-            message,
-            replyto: email,
-            botcheck: false,
-          }),
+          body: payload,
         });
         const json = await res.json();
         if (!json.success) throw new Error(json.message ?? "Send failed");
