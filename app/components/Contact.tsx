@@ -32,6 +32,7 @@ export default function Contact() {
   const ref = useRef<HTMLElement | null>(null);
   const [show, setShow] = useState(false);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [sendStep, setSendStep] = useState(0); // 0 = connecting, 1 = sending, 2 = delivering
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -40,6 +41,8 @@ export default function Contact() {
     return () => o.disconnect();
   }, []);
   const rise = (d: string) => `transition-all duration-700 ease-out ${show ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"} ${d}`;
+  const sending = status === "sending";
+  const SEND_STEPS = ["Connecting", "Sending", "Delivering"];
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -70,6 +73,12 @@ export default function Contact() {
     }
 
     setStatus("sending");
+    setSendStep(0);
+    // Advance the step label on a timer so the visitor sees progress even while
+    // the network request is in flight. Cleared in the finally block below.
+    const stepTimer = setInterval(() => {
+      setSendStep((s) => (s < SEND_STEPS.length - 1 ? s + 1 : s));
+    }, 1200);
     try {
       // Submit once per key so each inbox receives the message.
       for (const access_key of keys) {
@@ -89,6 +98,8 @@ export default function Contact() {
         });
         const json = await res.json();
         if (!json.success) throw new Error(json.message ?? "Send failed");
+        // Move to the next step as each inbox confirms delivery.
+        setSendStep((s) => (s < SEND_STEPS.length - 1 ? s + 1 : s));
       }
       setStatus("sent");
       form.reset();
@@ -96,6 +107,8 @@ export default function Contact() {
     } catch {
       setStatus("error");
       setTimeout(() => setStatus("idle"), 5000);
+    } finally {
+      clearInterval(stepTimer);
     }
   }
   return (
@@ -118,29 +131,81 @@ export default function Contact() {
         </p>
         <div className="mt-10 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
           <form id="contact-form" onSubmit={handleSubmit} className={`${rise("[transition-delay:250ms]")} rounded-3xl border border-white/25 bg-white/10 p-6 shadow backdrop-blur-xl sm:p-8 dark:border-white/15 dark:bg-white/[0.06]`}>
-            <div className="grid gap-4 sm:grid-cols-2">
+            {/* Progress steps — visible while the message is being sent */}
+            {status === "sending" && (
+              <div className="mt-4" aria-hidden>
+                {/* Animated progress bar (indeterminate while waiting on the network) */}
+                <div className="h-1.5 overflow-hidden rounded-full bg-zinc-900/10 dark:bg-white/10">
+                  <div className="h-full w-1/3 animate-[sendbar_1.2s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500" />
+                </div>
+                {/* Step indicators: Connecting → Sending → Delivering */}
+                <ol className="mt-3 flex items-center gap-1.5">
+                  {SEND_STEPS.map((label, i) => (
+                    <li key={label} className="flex flex-1 items-center gap-1.5 last:flex-none">
+                      <span className="flex flex-1 flex-col items-center gap-1.5">
+                        <span
+                          className={`flex w-full items-center gap-1.5 text-[11px] font-semibold ${
+                            i < sendStep
+                              ? "text-emerald-600 dark:text-emerald-300"
+                              : i === sendStep
+                                ? "text-zinc-800 dark:text-zinc-100"
+                                : "text-zinc-400 dark:text-zinc-500"
+                          }`}
+                        >
+                          <span
+                            className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] ${
+                              i < sendStep
+                                ? "bg-emerald-500 text-white"
+                                : i === sendStep
+                                  ? "bg-gradient-to-br from-violet-500 via-fuchsia-500 to-cyan-400 text-white"
+                                  : "bg-zinc-900/10 text-zinc-400 dark:bg-white/10 dark:text-zinc-500"
+                            }`}
+                          >
+                            {i < sendStep ? "✓" : i + 1}
+                          </span>
+                          {label}
+                        </span>
+                      </span>
+                      {i < SEND_STEPS.length - 1 && (
+                        <span className={`h-px flex-1 ${i < sendStep ? "bg-emerald-400" : "bg-zinc-900/10 dark:bg-white/10"}`} />
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            {/* Skeleton shimmer over the fields while sending, so the form visibly locks */}
+            <div className={`relative ${sending ? "pointer-events-none select-none" : ""}`}>
+              <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="name" className="mb-1.5 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">Your Name</label>
-                <input id="name" name="name" required placeholder="Juan Dela Cruz" className="h-12 w-full rounded-xl border border-white/25 bg-white/20 px-4 text-sm text-zinc-900 placeholder:text-zinc-500 backdrop-blur-md outline-none transition focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30 dark:border-white/15 dark:bg-white/10 dark:text-white" />
+                <input id="name" name="name" required disabled={sending} placeholder="Juan Dela Cruz" className="h-12 w-full rounded-xl border border-white/25 bg-white/20 px-4 text-sm text-zinc-900 placeholder:text-zinc-500 backdrop-blur-md outline-none transition focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30 disabled:opacity-60 dark:border-white/15 dark:bg-white/10 dark:text-white" />
               </div>
               <div>
                 <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">Email Address</label>
-                <input id="email" name="email" type="email" required placeholder="you@email.com" className="h-12 w-full rounded-xl border border-white/25 bg-white/20 px-4 text-sm text-zinc-900 placeholder:text-zinc-500 backdrop-blur-md outline-none transition focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30 dark:border-white/15 dark:bg-white/10 dark:text-white" />
+                <input id="email" name="email" type="email" required disabled={sending} placeholder="you@email.com" className="h-12 w-full rounded-xl border border-white/25 bg-white/20 px-4 text-sm text-zinc-900 placeholder:text-zinc-500 backdrop-blur-md outline-none transition focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30 disabled:opacity-60 dark:border-white/15 dark:bg-white/10 dark:text-white" />
               </div>
             </div>
             <div className="mt-4">
               <label htmlFor="subject" className="mb-1.5 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">Subject</label>
-              <input id="subject" name="subject" required placeholder="Project inquiry, collaboration..." className="h-12 w-full rounded-xl border border-white/25 bg-white/20 px-4 text-sm text-zinc-900 placeholder:text-zinc-500 backdrop-blur-md outline-none transition focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30 dark:border-white/15 dark:bg-white/10 dark:text-white" />
+              <input id="subject" name="subject" required disabled={sending} placeholder="Project inquiry, collaboration..." className="h-12 w-full rounded-xl border border-white/25 bg-white/20 px-4 text-sm text-zinc-900 placeholder:text-zinc-500 backdrop-blur-md outline-none transition focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30 disabled:opacity-60 dark:border-white/15 dark:bg-white/10 dark:text-white" />
             </div>
             <div className="mt-4">
               <label htmlFor="message" className="mb-1.5 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">Message</label>
-              <textarea id="message" name="message" required rows={5} placeholder="Hi Rolly! I'd like to talk about..." className="w-full rounded-xl border border-white/25 bg-white/20 px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-500 backdrop-blur-md outline-none transition focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30 dark:border-white/15 dark:bg-white/10 dark:text-white" />
+              <textarea id="message" name="message" required rows={5} disabled={sending} placeholder="Hi Rolly! I'd like to talk about..." className="w-full rounded-xl border border-white/25 bg-white/20 px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-500 backdrop-blur-md outline-none transition focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30 disabled:opacity-60 dark:border-white/15 dark:bg-white/10 dark:text-white" />
             </div>
-            <button type="submit" disabled={status === "sending"} className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-zinc-900 text-sm font-semibold text-white shadow-xl transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-zinc-900">
+              {sending && (
+                <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+                  <div className="absolute inset-0 animate-pulse bg-white/20 dark:bg-white/[0.04]" />
+                  <div className="absolute inset-y-0 w-1/2 animate-[sendshine_1.4s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/10" />
+                </div>
+              )}
+            </div>
+            <button type="submit" disabled={status === "sending"} className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-zinc-900 text-sm font-semibold text-white shadow-xl transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-zinc-900" aria-live="polite">
               {status === "sending" ? (
                 <>
                   <svg aria-hidden viewBox="0 0 24 24" fill="none" className="h-4 w-4 animate-spin"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" /><path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
-                  Sending your message...
+                  {SEND_STEPS[sendStep]} your message...
                 </>
               ) : (
                 "Send Message"
