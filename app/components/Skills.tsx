@@ -1,5 +1,27 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { FiFilm } from "react-icons/fi";
+import {
+  SiAdobeillustrator,
+  SiAdobephotoshop,
+  SiCanva,
+  SiFigma,
+  SiFirebase,
+  SiGit,
+  SiGithub,
+  SiMeta,
+  SiNextdotjs,
+  SiNotion,
+  SiOpenai,
+  SiReact,
+  SiTailwindcss,
+  SiTrello,
+  SiTypescript,
+  SiVercel,
+  SiVisualstudiocode,
+  SiWordpress,
+} from "react-icons/si";
+import type { IconType } from "react-icons";
 const GROUPS = [
   { tag: "SM", title: "Social Media Management", grad: "from-emerald-400 to-cyan-500" },
   { tag: "GD", title: "Graphic Design", grad: "from-violet-500 to-fuchsia-500" },
@@ -10,7 +32,27 @@ const LEVELS: Record<string, { n: string; p: number }[]> = {
   GD: [{ n: "Branding & Identity", p: 88 }, { n: "Social Media Creatives", p: 94 }, { n: "Marketing Materials", p: 86 }, { n: "Layout & Typography", p: 84 }],
   DEV: [{ n: "React / Next.js", p: 85 }, { n: "HTML, CSS & Tailwind", p: 90 }, { n: "JavaScript / TypeScript", p: 82 }, { n: "APIs & Databases", p: 78 }],
 };
-const TOOLS = ["Meta Suite", "Canva", "Photoshop", "Illustrator", "CapCut", "Notion", "VS Code", "React", "Next.js", "Tailwind", "TypeScript", "Git & GitHub", "Vercel", "Figma", "Trello", "ChatGPT", "Firebase", "WordPress"];
+const TOOLS: { name: string; category: string; Icon: IconType; color: string }[] = [
+  { name: "Meta Business Suite", category: "Social · Publish", Icon: SiMeta, color: "#0082FB" },
+  { name: "Canva", category: "Design", Icon: SiCanva, color: "#00C4CC" },
+  { name: "Photoshop", category: "Design", Icon: SiAdobephotoshop, color: "#31A8FF" },
+  { name: "Illustrator", category: "Design", Icon: SiAdobeillustrator, color: "#FF9A00" },
+  { name: "CapCut", category: "Video", Icon: FiFilm, color: "#000000" },
+  { name: "Notion", category: "Organize", Icon: SiNotion, color: "#000000" },
+  { name: "VS Code", category: "Develop", Icon: SiVisualstudiocode, color: "#007ACC" },
+  { name: "React", category: "Develop", Icon: SiReact, color: "#61DAFB" },
+  { name: "Next.js", category: "Develop", Icon: SiNextdotjs, color: "#000000" },
+  { name: "Tailwind CSS", category: "Develop", Icon: SiTailwindcss, color: "#06B6D4" },
+  { name: "TypeScript", category: "Develop", Icon: SiTypescript, color: "#3178C6" },
+  { name: "Git", category: "Develop", Icon: SiGit, color: "#F05032" },
+  { name: "GitHub", category: "Develop", Icon: SiGithub, color: "#181717" },
+  { name: "Vercel", category: "Deploy", Icon: SiVercel, color: "#000000" },
+  { name: "Figma", category: "Design", Icon: SiFigma, color: "#F24E1E" },
+  { name: "Trello", category: "Organize", Icon: SiTrello, color: "#0052CC" },
+  { name: "ChatGPT", category: "AI Workflow", Icon: SiOpenai, color: "#10A37F" },
+  { name: "Firebase", category: "Backend", Icon: SiFirebase, color: "#DD2C00" },
+  { name: "WordPress", category: "Publish", Icon: SiWordpress, color: "#21759B" },
+];
 export default function Skills() {
   const ref = useRef<HTMLElement | null>(null);
   const [show, setShow] = useState(false);
@@ -38,7 +80,7 @@ export default function Skills() {
           What I <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 bg-clip-text text-transparent">bring to the table</span>
         </h2>
         <p className={`${rise("[transition-delay:200ms]")} mt-3 max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-400`}>
-          Three crafts, one workflow — placeholder levels you can adjust to your real experience.
+          Three crafts, one workflow — the skills I use to grow audiences, design on-brand visuals, and ship production-ready websites.
         </p>
         <div className="mt-10 grid gap-5 lg:grid-cols-3">
           {GROUPS.map((g, i) => (
@@ -62,10 +104,22 @@ export default function Skills() {
         </div>
         <div className={`${rise("[transition-delay:500ms]")} mt-5 rounded-3xl border border-white/25 bg-white/10 p-6 shadow backdrop-blur-xl sm:p-8 dark:border-white/15 dark:bg-white/[0.06]`}>
           <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Tools I work with</h3>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Design, publish, and ship — swap these for your actual stack.</p>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">My day-to-day stack for content, design, and development.</p>
           <ul className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-            {TOOLS.map((t) => (
-              <li key={t} className="rounded-2xl border border-white/25 bg-white/20 px-3 py-3 text-center text-xs font-semibold text-zinc-700 transition hover:-translate-y-0.5 hover:bg-white/30 dark:border-white/15 dark:bg-white/10 dark:text-zinc-200">{t}</li>
+            {TOOLS.map(({ name, category, Icon, color }) => (
+              <li
+                key={name}
+                title={`${name} — ${category}`}
+                className="group flex flex-col items-center gap-2 rounded-2xl border border-white/25 bg-white/20 px-3 py-4 text-center transition hover:-translate-y-1 hover:bg-white/30 hover:shadow-lg dark:border-white/15 dark:bg-white/10 dark:hover:bg-white/[0.14]"
+              >
+                <span
+                  className="grid h-11 w-11 place-items-center rounded-xl bg-white shadow-sm ring-1 ring-black/5 transition group-hover:scale-110 dark:bg-white/[0.12] dark:ring-white/10"
+                >
+                  <Icon size={22} color={color} aria-label={`${name} logo`} className="dark:brightness-[1.7] dark:contrast-[1.05]" />
+                </span>
+                <span className="text-xs font-bold leading-tight text-zinc-800 dark:text-zinc-100">{name}</span>
+                <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{category}</span>
+              </li>
             ))}
           </ul>
         </div>

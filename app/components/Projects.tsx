@@ -29,7 +29,7 @@ function SocialGrid() {
   return (
     <div>
       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Social Media Manager</h3>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Campaigns that grow communities. Replace with your real campaigns.</p>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Campaigns that grow engaged communities and drive measurable results.</p>
       <div className="mt-6 grid gap-5 md:grid-cols-3">
         {items.map((c) => (
           <Card key={c.t} m={c.m} mCls="bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" t={c.t} d={c.d} tags={c.tags} top={<div className="flex h-36 items-center justify-center bg-gradient-to-br from-violet-500/30 via-fuchsia-500/25 to-cyan-400/25 font-mono text-xs text-zinc-600 dark:text-zinc-300">SM preview image</div>} />
@@ -48,7 +48,7 @@ function DesignGrid() {
   return (
     <div>
       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Graphic Design</h3>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Visuals that stop the scroll. Swap in your actual work.</p>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Visuals designed to stop the scroll and strengthen brand identity.</p>
       <div className="mt-6 grid gap-5 md:grid-cols-3">
         {items.map((c) => (
           <Card key={c.t} m={c.m} mCls="bg-violet-500/15 text-violet-600 dark:text-violet-300" t={c.t} d={c.d} tags={c.tags} top={<div className="flex h-36 items-center justify-center bg-zinc-950 font-mono text-xs text-zinc-400">Design preview image</div>} />
@@ -66,7 +66,7 @@ function DevGrid() {
   return (
     <div>
       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Full-Stack Projects</h3>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Web apps built end to end. Replace with your shipped projects.</p>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Web apps designed, built, and shipped end to end.</p>
       <div className="mt-6 grid gap-5 md:grid-cols-3">
         {items.map((c) => (
           <Card key={c.t} m={c.m} mCls="bg-cyan-500/15 text-cyan-600 dark:text-cyan-300" t={c.t} d={c.d} tags={c.tags} top={<div className="border-b border-white/20 px-5 py-3 dark:border-white/10"><div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-400" /><span className="h-2.5 w-2.5 rounded-full bg-amber-400" /><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /><span className="ml-2 font-mono text-[11px] text-zinc-500">preview</span></div></div>} />
@@ -108,7 +108,7 @@ export default function Projects() {
           Selected <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 bg-clip-text text-transparent">work</span>
         </h2>
         <p className={`${rise("[transition-delay:200ms]")} mt-3 max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-400`}>
-          Browse by craft — pick a category to preview placeholders you can replace with your own.
+          Explore selected work across social media, design, and development — each project reflects real results and creative problem-solving.
         </p>
         <div className={`${rise("[transition-delay:250ms]")} mt-8 flex flex-wrap gap-2`}>
           {tabs.map((t) => (
