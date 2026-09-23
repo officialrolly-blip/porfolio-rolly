@@ -108,11 +108,11 @@ export default function Contact() {
             <div className="relative overflow-hidden rounded-3xl border border-white/25 bg-white/10 p-6 shadow backdrop-blur-xl sm:p-7 dark:border-white/15 dark:bg-white/[0.06]">
               <h3 className="relative text-lg font-bold text-zinc-900 dark:text-white">Download my CV</h3>
               <p className="relative mt-1 text-sm text-zinc-500 dark:text-zinc-400">Get my resume with experience and skills.</p>
-              <a href="/cv.pdf" download className="relative mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 text-sm font-semibold text-white shadow-xl transition hover:-translate-y-0.5">
+              <a href="https://drive.google.com/file/d/1Xm00VhAWofotbvUH1_tbzGiy0eItMnGU/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="relative mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 text-sm font-semibold text-white shadow-xl transition hover:-translate-y-0.5">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="h-4 w-4"><path d="M12 3v12m0 0 4-4m-4 4-4-4" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
                 Download CV
               </a>
-              <p className="relative mt-3 text-center font-mono text-[11px] text-zinc-400">Place your file at public/cv.pdf</p>
+              <p className="relative mt-3 text-center font-mono text-[11px] text-zinc-400">Opens my CV in Google Drive</p>
             </div>
           </div>
         </div>
