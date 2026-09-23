@@ -31,7 +31,7 @@ const SOCIALS = [
 export default function Contact() {
   const ref = useRef<HTMLElement | null>(null);
   const [show, setShow] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -40,6 +40,64 @@ export default function Contact() {
     return () => o.disconnect();
   }, []);
   const rise = (d: string) => `transition-all duration-700 ease-out ${show ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"} ${d}`;
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    // One free access key per Gmail address (Web3Forms free tier = 1 inbox per key;
+    // the CC field is a paid feature). Get keys at https://web3forms.com — create
+    // one with iamrollyparedes@gmail.com and one with rollyparedesva2@gmail.com.
+    const keys = [
+      process.env.NEXT_PUBLIC_WEB3FORMS_KEY_1 ?? "",
+      process.env.NEXT_PUBLIC_WEB3FORMS_KEY_2 ?? "",
+    ].filter(Boolean);
+    const name = String(data.get("name") ?? "");
+    const email = String(data.get("email") ?? "");
+    const subject = String(data.get("subject") ?? "New message from portfolio");
+    const message = String(data.get("message") ?? "");
+    const recipients = ["iamrollyparedes@gmail.com", "rollyparedesva2@gmail.com"];
+
+    // No access keys yet → open the visitor's mail app as a fallback so nothing is lost.
+    if (keys.length === 0) {
+      const to = recipients.join(",");
+      const body = `${message}\n\n— ${name} (${email})`;
+      window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      setStatus("sent");
+      form.reset();
+      setTimeout(() => setStatus("idle"), 5000);
+      return;
+    }
+
+    setStatus("sending");
+    try {
+      // Submit once per key so each inbox receives the message.
+      for (const access_key of keys) {
+        const res = await fetch("https://api.web3forms.com/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            access_key,
+            from_name: "Rolly Portfolio Contact Form",
+            name,
+            email,
+            subject: `[Portfolio] ${subject}`,
+            message,
+            replyto: email,
+            botcheck: false,
+          }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message ?? "Send failed");
+      }
+      setStatus("sent");
+      form.reset();
+      setTimeout(() => setStatus("idle"), 5000);
+    } catch {
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 5000);
+    }
+  }
   return (
     <section id="contact" ref={ref} className="relative flex w-full scroll-mt-24 justify-center overflow-hidden px-4 py-16 sm:px-6 lg:py-24">
       <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -59,7 +117,7 @@ export default function Contact() {
           Send me a message or reach me on social — I usually reply within 24 hours.
         </p>
         <div className="mt-10 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <form id="contact-form" onSubmit={(e) => { e.preventDefault(); setSent(true); (e.target as HTMLFormElement).reset(); setTimeout(() => setSent(false), 4000); }} className={`${rise("[transition-delay:250ms]")} rounded-3xl border border-white/25 bg-white/10 p-6 shadow backdrop-blur-xl sm:p-8 dark:border-white/15 dark:bg-white/[0.06]`}>
+          <form id="contact-form" onSubmit={handleSubmit} className={`${rise("[transition-delay:250ms]")} rounded-3xl border border-white/25 bg-white/10 p-6 shadow backdrop-blur-xl sm:p-8 dark:border-white/15 dark:bg-white/[0.06]`}>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="name" className="mb-1.5 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">Your Name</label>
@@ -78,10 +136,18 @@ export default function Contact() {
               <label htmlFor="message" className="mb-1.5 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">Message</label>
               <textarea id="message" name="message" required rows={5} placeholder="Hi Rolly! I'd like to talk about..." className="w-full rounded-xl border border-white/25 bg-white/20 px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-500 backdrop-blur-md outline-none transition focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30 dark:border-white/15 dark:bg-white/10 dark:text-white" />
             </div>
-            <button type="submit" className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white shadow-xl transition hover:-translate-y-0.5 dark:bg-white dark:text-zinc-900">
-              Send Message
+            <button type="submit" disabled={status === "sending"} className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-zinc-900 text-sm font-semibold text-white shadow-xl transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-zinc-900">
+              {status === "sending" ? (
+                <>
+                  <svg aria-hidden viewBox="0 0 24 24" fill="none" className="h-4 w-4 animate-spin"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" /><path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
+                  Sending your message...
+                </>
+              ) : (
+                "Send Message"
+              )}
             </button>
-            {sent && <p className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5 text-center text-sm font-medium text-emerald-600 dark:text-emerald-300">Thanks! Your message was noted — connect an email service to receive it.</p>}
+            {status === "sent" && <p role="status" className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5 text-center text-sm font-medium text-emerald-600 dark:text-emerald-300">✅ Message sent successfully! Thanks for reaching out — I&apos;ll get back to you within 24 hours.</p>}
+            {status === "error" && <p role="alert" className="mt-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-2.5 text-center text-sm font-medium text-rose-600 dark:text-rose-300">Something went wrong — please email me directly at iamrollyparedes@gmail.com.</p>}
           </form>
           <div className={`${rise("[transition-delay:350ms]")} flex flex-col gap-5`}>
             <div className="rounded-3xl border border-white/25 bg-white/10 p-6 shadow backdrop-blur-xl sm:p-7 dark:border-white/15 dark:bg-white/[0.06]">
