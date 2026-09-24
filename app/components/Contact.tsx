@@ -26,7 +26,7 @@ function GithubIcon() {
 const SOCIALS = [
   { name: "Facebook", href: "https://www.facebook.com/RollyParedesOrtiz/", handle: "facebook.com/RollyParedesOrtiz", icon: "fb" },
   { name: "Instagram", href: "https://instagram.com/piierolly/", handle: "@piierolly", icon: "ig" },
-  { name: "GitHub", href: "https://github.com/", handle: "github.com/your-username", icon: "gh" },
+  { name: "GitHub", href: "https://github.com/officialrolly-blip", handle: "github.com/officialrolly-blip", icon: "gh" },
 ];
 export default function Contact() {
   const ref = useRef<HTMLElement | null>(null);
