@@ -75,10 +75,9 @@ export default function ChatAssistant() {
           aria-label="Open chat with Rolly AI"
           className="group fixed bottom-5 right-5 z-[60] sm:bottom-6 sm:right-6"
         >
-          <span aria-hidden className="animate-chat-ring absolute inset-0 rounded-full bg-gradient-to-br from-violet-500 via-fuchsia-500 to-cyan-400" />
-          <span className="relative grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-violet-600 via-fuchsia-500 to-cyan-500 p-[3px] shadow-2xl shadow-fuchsia-500/40 transition-transform duration-300 group-hover:scale-110">
-            <span className="grid h-full w-full place-items-center rounded-full bg-zinc-950 text-3xl">
-              <WavingBot />
+          <span className="relative grid h-16 w-16 place-items-center transition-transform duration-300 group-hover:scale-110">
+            <span className="grid h-full w-full place-items-center text-4xl drop-shadow-lg">
+              <WavingBot size="h-10 w-10" />
             </span>
           </span>
           <span className="pointer-events-none absolute right-full top-1/2 mr-3 hidden -translate-y-1/2 rounded-full border border-white/25 bg-white/80 px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-zinc-800 opacity-0 shadow-lg backdrop-blur-xl transition group-hover:opacity-100 sm:block dark:border-white/15 dark:bg-zinc-900/90 dark:text-zinc-100">
