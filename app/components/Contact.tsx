@@ -24,7 +24,7 @@ function GithubIcon() {
   );
 }
 const SOCIALS = [
-  { name: "Facebook", href: "https://facebook.com/", handle: "facebook.com/your-profile", icon: "fb" },
+  { name: "Facebook", href: "https://www.facebook.com/RollyParedesOrtiz/", handle: "facebook.com/RollyParedesOrtiz", icon: "fb" },
   { name: "Instagram", href: "https://instagram.com/", handle: "@your-handle", icon: "ig" },
   { name: "GitHub", href: "https://github.com/", handle: "github.com/your-username", icon: "gh" },
 ];
