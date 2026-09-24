@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 const ROLES = ["Social Media Manager", "Graphic Artist", "Full-Stack Developer"];
 export default function Hero() {
@@ -66,13 +67,19 @@ export default function Hero() {
               <span className="h-3 w-3 rounded-full bg-rose-400" /><span className="h-3 w-3 rounded-full bg-amber-400" /><span className="h-3 w-3 rounded-full bg-emerald-400" />
               <span className="ml-3 font-mono text-xs text-zinc-500 dark:text-zinc-400">rolly-portfolio — preview</span>
             </div>
-            <div className="flex aspect-[4/5] flex-col items-center justify-center gap-4 bg-zinc-950 p-8 text-center sm:aspect-square lg:aspect-[4/5]">
-              <span className="grid h-24 w-24 place-items-center rounded-3xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-cyan-400 text-3xl font-black text-white shadow-2xl shadow-fuchsia-500/30 ring-1 ring-white/30">RP</span>
-              <p className="font-mono text-sm text-zinc-400">Your photo goes here</p>
-              <p className="max-w-[220px] text-xs leading-5 text-zinc-500">Replace this placeholder with your portrait image later.</p>
-              <div className="flex gap-2">
+            <div className="relative aspect-[4/5] overflow-hidden bg-zinc-950 sm:aspect-square lg:aspect-[4/5]">
+              <Image
+                src="/rolly-paredes.jpg"
+                alt="Portrait of Rolly Paredes"
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 480px"
+                className="object-cover object-top"
+              />
+              <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-zinc-950/60 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-4 flex gap-2">
                 {["SM", "GD", "DEV"].map((t) => (
-                  <span key={t} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 font-mono text-[11px] text-zinc-300">{t}</span>
+                  <span key={t} className="rounded-full border border-white/20 bg-black/40 px-3 py-1 font-mono text-[11px] text-zinc-100 backdrop-blur-md">{t}</span>
                 ))}
               </div>
             </div>
