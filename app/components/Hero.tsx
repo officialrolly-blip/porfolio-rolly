@@ -49,7 +49,7 @@ export default function Hero() {
           </p>
           <div className={`${rise("[transition-delay:400ms]")} mt-8 flex flex-wrap items-center gap-3`}>
             <a href="#projects" className="inline-flex h-12 items-center rounded-full bg-zinc-900 px-7 text-sm font-semibold text-white shadow-xl shadow-zinc-900/20 transition hover:-translate-y-0.5 hover:shadow-2xl dark:bg-white dark:text-zinc-900">View My Work</a>
-            <a href="#contact" className="inline-flex h-12 items-center rounded-full border border-white/30 bg-white/10 px-7 text-sm font-semibold text-zinc-900 shadow backdrop-blur-xl backdrop-saturate-150 transition hover:-translate-y-0.5 hover:bg-white/20 dark:border-white/15 dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/10">Get in Touch</a>
+            <a href="https://drive.google.com/file/d/1Xm00VhAWofotbvUH1_tbzGiy0eItMnGU/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="inline-flex h-12 items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 text-sm font-semibold text-zinc-900 shadow backdrop-blur-xl backdrop-saturate-150 transition hover:-translate-y-0.5 hover:bg-white/20 dark:border-white/15 dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="h-4 w-4"><path d="M12 3v12m0 0 4-4m-4 4-4-4" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>Download CV</a>
           </div>
           <dl className={`${rise("[transition-delay:500ms]")} mt-10 flex max-w-md items-stretch gap-3`}>
             {[{ v: "3+", l: "Roles, one creator" }, { v: "50+", l: "Projects delivered" }, { v: "100%", l: "Commitment" }].map((s) => (
