@@ -26,6 +26,7 @@ export default function ChatAssistant() {
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [nudge, setNudge] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -38,6 +39,30 @@ export default function ChatAssistant() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open ]);
+
+  const dismissNudge = () => {
+    setNudge(false);
+    try { sessionStorage.setItem("rolly-ai-greeted", "1"); } catch {}
+  };
+
+  const openChat = () => {
+    dismissNudge();
+    setOpen(true);
+  };
+
+  // Auto-welcome: greet each visitor once per session with a pop-up bubble while the chat is closed.
+  useEffect(() => {
+    if (open) return;
+    let alreadyGreeted = false;
+    try { alreadyGreeted = sessionStorage.getItem("rolly-ai-greeted") === "1"; } catch {}
+    if (alreadyGreeted) return;
+    const show = setTimeout(() => setNudge(true), 4000);
+    const hide = setTimeout(() => {
+      setNudge(false);
+      try { sessionStorage.setItem("rolly-ai-greeted", "1"); } catch {}
+    }, 19000);
+    return () => { clearTimeout(show); clearTimeout(hide); };
+  }, [open]);
 
   async function send(text: string) {
     const clean = text.trim();
@@ -69,9 +94,26 @@ export default function ChatAssistant() {
   return (
     <>
       {!open && (
-        <button
+        <>
+          {nudge && (
+            <button
+              type="button"
+              onClick={openChat}
+              aria-label="Rolly AI welcome message — click to open chat"
+              className="animate-chat-pop fixed bottom-24 right-5 z-[59] w-[min(300px,calc(100vw-2.5rem))] rounded-2xl rounded-br-md border border-white/25 bg-white/90 p-4 text-left shadow-2xl backdrop-blur-xl sm:right-6 dark:border-white/15 dark:bg-zinc-900/95"
+            >
+              <span className="block text-sm leading-6 font-semibold text-zinc-800 dark:text-zinc-100">
+                👋 Hi there! I&apos;m Rolly AI — I can tell you about Rolly&apos;s services, skills, or how to hire him.
+              </span>
+              <span className="mt-1.5 block text-xs font-medium text-fuchsia-600 dark:text-fuchsia-400">
+                Click me to start chatting →
+              </span>
+              <span aria-hidden className="absolute -bottom-1.5 right-7 h-4 w-4 rotate-45 border-r border-b border-white/25 bg-white/90 dark:border-white/15 dark:bg-zinc-900/95" />
+            </button>
+          )}
+          <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={openChat}
           aria-label="Open chat with Rolly AI"
           className="group fixed bottom-5 right-5 z-[60] sm:bottom-6 sm:right-6"
         >
@@ -83,7 +125,8 @@ export default function ChatAssistant() {
           <span className="pointer-events-none absolute right-full top-1/2 mr-3 hidden -translate-y-1/2 rounded-full border border-white/25 bg-white/80 px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-zinc-800 opacity-0 shadow-lg backdrop-blur-xl transition group-hover:opacity-100 sm:block dark:border-white/15 dark:bg-zinc-900/90 dark:text-zinc-100">
             Chat with Rolly AI
           </span>
-        </button>
+          </button>
+        </>
       )}
 
       {open && (
