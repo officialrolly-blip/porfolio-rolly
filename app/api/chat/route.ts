@@ -88,8 +88,9 @@ type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 export async function POST(req: Request) {
   const apiKey = process.env.OPENROUTER_API_KEY ?? "";
   if (!apiKey) {
+    console.error("[chat] OPENROUTER_API_KEY is not set.");
     return Response.json(
-      { error: "Chat is not configured yet — the site owner needs to add an OPENROUTER_API_KEY." },
+      { error: "Rolly AI is warming up right now — please try again in a few minutes! 🤖" },
       { status: 500 }
     );
   }
@@ -149,8 +150,11 @@ export async function POST(req: Request) {
     }
   }
 
+  // Keep the technical detail server-side for debugging; show visitors a friendly, generic message.
+  console.error(`[chat] all models failed. Last error: ${lastError}`);
+
   return Response.json(
-    { error: `All free models are busy right now (${lastError}). Please try again in a moment!` },
+    { error: "I'm a bit busy right now — please try again in a moment! 🤖" },
     { status: 502 }
   );
 }
