@@ -101,7 +101,6 @@ export default function ChatAssistant() {
                   <span className="h-2 w-2 rounded-full bg-emerald-300" />
                 </span>
               </span>
-              <span className="block truncate text-[11px] text-white/80">Free OpenRouter models · replies instantly</span>
             </span>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close chat" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15 text-lg leading-none text-white transition hover:bg-white/30">×</button>
           </div>
