@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 type TabId = "social" | "design" | "dev";
-type CardProps = { m: string; mCls: string; t: string; d: string; tags: string[]; top: ReactNode };
-function Card({ m, mCls, t, d, tags, top }: CardProps) {
-  return (
+type CardProps = { m: string; mCls: string; t: string; d: string; tags: string[]; top: ReactNode; link?: string | null };
+function Card({ m, mCls, t, d, tags, top, link }: CardProps) {
+  const inner = (
     <article className="flex animate-[fade-up_0.5s_ease-out_both] flex-col overflow-hidden rounded-3xl border border-white/25 bg-white/10 shadow backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-xl dark:border-white/15 dark:bg-white/[0.06]">
       {top}
       <div className="flex flex-1 flex-col p-6">
@@ -19,58 +19,167 @@ function Card({ m, mCls, t, d, tags, top }: CardProps) {
       </div>
     </article>
   );
+  if (link) {
+    return (
+      <a href={link} target="_blank" rel="noopener noreferrer" className="block">
+        {inner}
+      </a>
+    );
+  }
+  return inner;
 }
-function SocialGrid() {
-  const items = [
-    { t: "30-Day Awareness Campaign", d: "Calendar with reels, carousels, stories that boosted reach.", tags: ["Calendar", "Reels", "Analytics"], m: "+120% reach" },
-    { t: "Engagement Playbook", d: "Comment strategy, DM funnels, weekly lives that built loyalty.", tags: ["Community", "UGC", "Lives"], m: "3x comments" },
-    { t: "Product Launch Series", d: "Teaser-to-launch posts with countdowns and shoutouts.", tags: ["Launch", "Promo", "Collabs"], m: "+45% clicks" },
-  ];
+
+type P = {
+  id: string; category: TabId; title: string; description: string;
+  tags: string[]; metric: string; imageUrl: string | null;
+  url?: string | null; thumbnailUrl?: string | null;
+};
+
+function useProjects() {
+  const [items, setItems] = useState<P[] | null>(null);
+  useEffect(() => {
+    fetch("/api/projects", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setItems(Array.isArray(d.projects) ? d.projects : []))
+      .catch(() => setItems([]));
+  }, []);
+  return items;
+}
+
+// eslint-disable-next-line @next/next/no-img-element
+const Img = ({ src, alt }: { src: string; alt: string }) => (
+  <img src={src} alt={alt} loading="lazy" className="h-36 w-full object-cover object-top" />
+);
+
+// Full-stack thumbnail with resilient fallbacks:
+// 1. saved local/remote thumbnail (repairs old broken encoded thum.io URLs)
+// 2. live WordPress mShots of the project URL (yes — WordPress powers this, free, no key)
+// 3. live thum.io of the project URL (raw URL, NOT encoded)
+// 4. styled placeholder (never a broken image icon)
+function DevThumb({ title, stored, pageUrl }: { title: string; stored: string | null; pageUrl?: string | null }) {
+  const [step, setStep] = useState(0);
+  const cleanStored = repairStored(stored);
+  const candidates = [
+    cleanStored,
+    pageUrl ? `https://s0.wp.com/mshots/v1/${encodeURIComponent(pageUrl)}?w=1200` : null,
+    pageUrl ? `https://image.thum.io/get/width/1200/crop/800/noanimate/${pageUrl}` : null,
+  ].filter(Boolean) as string[];
+  if (candidates.length === 0 || step >= candidates.length) {
+    return (
+      <div className="flex h-44 items-center justify-center bg-gradient-to-br from-cyan-500/25 via-violet-500/20 to-fuchsia-500/25 font-mono text-xs text-zinc-500">
+        {title} · live preview
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={candidates[step]}
+      alt={title + " front page"}
+      loading="lazy"
+      onError={() => setStep((s) => s + 1)}
+      className="h-44 w-full object-cover object-top"
+    />
+  );
+}
+
+function repairStored(stored: string | null | undefined): string | null {
+  if (!stored) return null;
+  const marker = "/noanimate/";
+  if (stored.includes("image.thum.io") && stored.includes(marker) && stored.includes("%")) {
+    try {
+      const parts = stored.split(marker);
+      const decoded = decodeURIComponent(parts[1] ?? "");
+      if (/^https?:\/\//i.test(decoded)) return `${parts[0]}${marker}${decoded}`;
+    } catch {
+      return stored;
+    }
+  }
+  return stored;
+}
+
+function SocialGrid({ items }: { items: P[] | null }) {
+  const live = (items ?? []).filter((p) => p.category === "social");
   return (
     <div>
       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Social Media Manager</h3>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Campaigns that grow engaged communities and drive measurable results.</p>
       <div className="mt-6 grid gap-5 md:grid-cols-3">
-        {items.map((c) => (
-          <Card key={c.t} m={c.m} mCls="bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" t={c.t} d={c.d} tags={c.tags} top={<div className="flex h-36 items-center justify-center bg-gradient-to-br from-violet-500/30 via-fuchsia-500/25 to-cyan-400/25 font-mono text-xs text-zinc-600 dark:text-zinc-300">SM preview image</div>} />
-        ))}
+        {items === null ? (
+          <p className="text-sm text-zinc-500">Loading works…</p>
+        ) : live.length === 0 ? (
+          <p className="rounded-2xl border border-white/20 bg-white/40 p-5 text-sm text-zinc-500 dark:bg-white/5">No works yet — check back soon.</p>
+        ) : (
+          live.map((c) => (
+            <Card key={c.id} m={c.metric || "New"} mCls="bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" t={c.title} d={c.description} tags={c.tags} top={c.imageUrl ? <Img src={c.imageUrl} alt={c.title} /> : <div className="flex h-36 items-center justify-center bg-gradient-to-br from-violet-500/30 via-fuchsia-500/25 to-cyan-400/25 font-mono text-xs text-zinc-600 dark:text-zinc-300">SM preview image</div>} />
+          ))
+        )}
       </div>
     </div>
   );
 }
 
-function DesignGrid() {
-  const items = [
-    { t: "Brand Identity Kit", d: "Logo lockups, palette, typography, and usage guide.", tags: ["Logo", "Palette", "Guide"], m: "12 assets" },
-    { t: "Social Template Pack", d: "Reusable post, story, and carousel templates.", tags: ["Posts", "Stories", "Carousels"], m: "30 templates" },
-    { t: "Poster Series", d: "Bold event and promo posters for print and digital.", tags: ["Posters", "Print", "Digital"], m: "8 posters" },
-  ];
+function DesignGrid({ items }: { items: P[] | null }) {
+  const live = (items ?? []).filter((p) => p.category === "design");
   return (
     <div>
       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Graphic Design</h3>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Visuals designed to stop the scroll and strengthen brand identity.</p>
       <div className="mt-6 grid gap-5 md:grid-cols-3">
-        {items.map((c) => (
-          <Card key={c.t} m={c.m} mCls="bg-violet-500/15 text-violet-600 dark:text-violet-300" t={c.t} d={c.d} tags={c.tags} top={<div className="flex h-36 items-center justify-center bg-zinc-950 font-mono text-xs text-zinc-400">Design preview image</div>} />
-        ))}
+        {items === null ? (
+          <p className="text-sm text-zinc-500">Loading works…</p>
+        ) : live.length === 0 ? (
+          <p className="rounded-2xl border border-white/20 bg-white/40 p-5 text-sm text-zinc-500 dark:bg-white/5">No works yet — check back soon.</p>
+        ) : (
+          live.map((c) => (
+            <Card key={c.id} m={c.metric || "New"} mCls="bg-violet-500/15 text-violet-600 dark:text-violet-300" t={c.title} d={c.description} tags={c.tags} top={c.imageUrl ? <Img src={c.imageUrl} alt={c.title} /> : <div className="flex h-36 items-center justify-center bg-zinc-950 font-mono text-xs text-zinc-400">Design preview image</div>} />
+          ))
+        )}
       </div>
     </div>
   );
 }
-function DevGrid() {
-  const items = [
-    { t: "Portfolio Website", d: "This glass portfolio — Next.js, Tailwind, animated sections.", tags: ["Next.js", "Tailwind", "Vercel"], m: "Live" },
-    { t: "Booking Web App", d: "Booking flow with auth, dashboard, and admin panel.", tags: ["React", "API", "Database"], m: "Full-stack" },
-    { t: "E-Commerce Storefront", d: "Catalog, cart, checkout UI, and order tracking.", tags: ["Storefront", "Cart", "Checkout"], m: "Mobile-first" },
-  ];
+function DevGrid({ items }: { items: P[] | null }) {
+  const live = (items ?? []).filter((p) => p.category === "dev");
+  // SAME card UI — only addition is the auto front-page thumbnail image on top
+  const browserBar = (
+    <div className="border-b border-white/20 px-5 py-3 dark:border-white/10">
+      <div className="flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+        <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+        <span className="ml-2 font-mono text-[11px] text-zinc-500">preview</span>
+      </div>
+    </div>
+  );
   return (
     <div>
       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Full-Stack Projects</h3>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Web apps designed, built, and shipped end to end.</p>
       <div className="mt-6 grid gap-5 md:grid-cols-3">
-        {items.map((c) => (
-          <Card key={c.t} m={c.m} mCls="bg-cyan-500/15 text-cyan-600 dark:text-cyan-300" t={c.t} d={c.d} tags={c.tags} top={<div className="border-b border-white/20 px-5 py-3 dark:border-white/10"><div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-400" /><span className="h-2.5 w-2.5 rounded-full bg-amber-400" /><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /><span className="ml-2 font-mono text-[11px] text-zinc-500">preview</span></div></div>} />
-        ))}
+        {items === null ? (
+          <p className="text-sm text-zinc-500">Loading works…</p>
+        ) : live.length === 0 ? (
+          <p className="rounded-2xl border border-white/20 bg-white/40 p-5 text-sm text-zinc-500 dark:bg-white/5">No works yet — check back soon.</p>
+        ) : (
+          live.map((c) => (
+            <Card
+              key={c.id}
+              m={c.metric || "Live"}
+              mCls="bg-cyan-500/15 text-cyan-600 dark:text-cyan-300"
+              t={c.title}
+              d={c.description}
+              tags={c.tags}
+              link={c.url}
+              top={
+                <div>
+                  {browserBar}
+                  <DevThumb title={c.title} stored={c.thumbnailUrl ?? c.imageUrl} pageUrl={c.url} />
+                </div>
+              }
+            />
+          ))
+        )}
       </div>
     </div>
   );
@@ -79,6 +188,7 @@ export default function Projects() {
   const ref = useRef<HTMLElement | null>(null);
   const [show, setShow] = useState(false);
   const [tab, setTab] = useState<TabId>("social");
+  const items = useProjects();
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -119,9 +229,9 @@ export default function Projects() {
           ))}
         </div>
         <div className="mt-10" key={tab}>
-          {tab === "social" && <SocialGrid />}
-          {tab === "design" && <DesignGrid />}
-          {tab === "dev" && <DevGrid />}
+          {tab === "social" && <SocialGrid items={items} />}
+          {tab === "design" && <DesignGrid items={items} />}
+          {tab === "dev" && <DevGrid items={items} />}
         </div>
       </div>
     </section>

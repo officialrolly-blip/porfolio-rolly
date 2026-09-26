@@ -1,0 +1,123 @@
+[
+  {
+    "id": "p-1790424655726-zjqwy",
+    "category": "dev",
+    "title": "My Personal Portfolio",
+    "description": "Built a responsive personal portfolio using Next.js, React, TypeScript, and Tailwind, integrating OpenRouter AI models and custom image services, deployed on Vercel to showcase skills and attract client inquiries.",
+    "tags": [
+      "Next.js 16.3.6",
+      "React 19.2.8",
+      "React DOM 19.2.8",
+      "TypeScript 5",
+      "Node.js 26",
+      "Tailwind CSS 4",
+      "PostCSS",
+      "Geist"
+    ],
+    "metric": "300",
+    "imageUrl": null,
+    "url": "https://rollyparedes-one.vercel.app",
+    "techStack": [
+      "Next.js 16.3.6",
+      "React 19.2.8",
+      "React DOM 19.2.8",
+      "TypeScript 5",
+      "Node.js 26",
+      "Tailwind CSS 4",
+      "PostCSS",
+      "Geist",
+      "Geist Mono",
+      "react-icons 4.12.0"
+    ],
+    "thumbnailUrl": "/uploads/shot-1790424618747-07xdl.jpg",
+    "createdAt": "2026-09-26T12:10:55.726Z"
+  },
+  {
+    "id": "p-1790424401222-t5c0y",
+    "category": "dev",
+    "title": "Hypatia Review Center Official Website",
+    "description": "Developed a responsive official website for Hypatia Review Center using Next.js, Tailwind CSS, and Neon DB, delivering fast performance, seamless navigation, and an engaging UI that increased visitor engagement and streamlined course information access.",
+    "tags": [
+      "Next.js",
+      "Tailwind",
+      "Neon DB"
+    ],
+    "metric": "100",
+    "imageUrl": null,
+    "url": "https://hypatia-review-center.netlify.app",
+    "techStack": [
+      "Next.js",
+      "Tailwind",
+      "Neon DB"
+    ],
+    "thumbnailUrl": "/uploads/shot-1790424386867-mfxk0.jpg",
+    "createdAt": "2026-09-26T12:06:41.222Z"
+  },
+  {
+    "id": "p-1790424268745-6k50p",
+    "category": "dev",
+    "title": "StudentTrack - Live map monitoring",
+    "description": "Built StudentTrack, a real‑time student location dashboard using Next.js, Tailwind CSS, and OpenStreetMap, enabling live map monitoring that enhances campus safety and streamlines attendance tracking.",
+    "tags": [
+      "Next.js",
+      "Tailwind",
+      "Open Street Map"
+    ],
+    "metric": "200",
+    "imageUrl": null,
+    "url": "https://student-tracking-system-gamma.vercel.app",
+    "techStack": [
+      "Next.js",
+      "Tailwind",
+      "Open Street Map"
+    ],
+    "thumbnailUrl": "/uploads/shot-1790424237854-1fyj1.jpg",
+    "createdAt": "2026-09-26T12:04:28.745Z"
+  },
+  {
+    "id": "p-1790424148093-ivmc9",
+    "category": "dev",
+    "title": "Knyte and AI buddy of Pi Gamma Phi Gamma Sigma",
+    "description": "Developed a responsive AI-driven assistant using Next.js and OpenRouter to streamline member engagement. This full-stack application provides instant, intelligent support, enhancing accessibility and user interaction for the Pi Gamma Phi Gamma Sigma community.",
+    "tags": [
+      "Next.js",
+      "Tailwind",
+      "Vercel",
+      "Open Router"
+    ],
+    "metric": "+500",
+    "imageUrl": null,
+    "url": "https://pgpgs-capiz.vercel.app/knyte",
+    "techStack": [
+      "Next.js",
+      "Tailwind",
+      "Vercel",
+      "Open Router"
+    ],
+    "thumbnailUrl": "/uploads/shot-1790424109442-a2dj2.jpg",
+    "createdAt": "2026-09-26T12:02:28.093Z"
+  },
+  {
+    "id": "p-1790424032322-0flep",
+    "category": "dev",
+    "title": "Pi Gamma Phi Gamma Sigma Capiz Chapter Official Website",
+    "description": "Developed a responsive, SEO‑optimized website for the Pi Gamma Phi Gamma Sigma Capiz Chapter using Next.js, Tailwind CSS, Vercel, and Neon DB, boosting member engagement and event visibility.",
+    "tags": [
+      "Next.js",
+      "Tailwind",
+      "Vercel",
+      "Neon"
+    ],
+    "metric": "+200",
+    "imageUrl": null,
+    "url": "https://pgpgs-capiz.vercel.app",
+    "techStack": [
+      "Next.js",
+      "Tailwind",
+      "Vercel",
+      "Neon"
+    ],
+    "thumbnailUrl": "/uploads/shot-1790423985392-smrlx.jpg",
+    "createdAt": "2026-09-26T12:00:32.322Z"
+  }
+]
