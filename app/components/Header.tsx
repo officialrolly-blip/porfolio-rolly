@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Logo from "./Logo";
 const links = [
   { label: "Home", href: "#home" },
   { label: "About Me", href: "#about" },
@@ -28,8 +29,8 @@ export default function Header() {
       >
         <div className="flex h-16 items-center justify-between px-5 sm:px-6">
           <a href="#home" onClick={() => { setActive("#home"); setOpen(false); }} className="group flex items-center gap-2.5">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-cyan-400 text-sm font-black text-white shadow-lg shadow-fuchsia-500/25 ring-1 ring-white/30 transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3">
-              RP
+            <span className="transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3">
+              <Logo size="md" />
             </span>
             <span className="flex flex-col leading-none">
               <span className="text-[15px] font-bold tracking-tight text-zinc-900 dark:text-white">Rolly Paredes</span>

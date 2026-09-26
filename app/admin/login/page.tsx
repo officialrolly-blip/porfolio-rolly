@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import Logo from "../../components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +45,7 @@ function LoginInner() {
     <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col justify-center">
       <div className="rounded-[2rem] border border-zinc-200 bg-white p-8 shadow-2xl shadow-zinc-950/10 sm:p-10 dark:border-white/10 dark:bg-zinc-950">
         <Link href="/" className="flex items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-cyan-400 text-base font-black text-white shadow-lg ring-1 ring-white/30">
-            RP
-          </span>
+          <Logo size="lg" />
           <span className="flex flex-col leading-tight">
             <span className="text-lg font-extrabold tracking-tight">Admin Login</span>
             <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">

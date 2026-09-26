@@ -162,3 +162,59 @@ html {
 .animate-typing-dot {
   animation: typing-bounce 1.2s ease-in-out infinite;
 }
+
+/* Animated RP logo — buttery-smooth flowing gradient.
+   One oversized gradient slowly pans position while a hue-rotate filter
+   continuously shifts the colors, so the blend never snaps or jumps. */
+.logo-animated {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(
+    120deg,
+    #8b5cf6,
+    #d946ef,
+    #22d3ee,
+    #6366f1,
+    #ec4899,
+    #8b5cf6
+  );
+  background-size: 300% 300%;
+  animation: logo-flow 8s ease-in-out infinite;
+}
+
+.logo-animated::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(
+    240deg,
+    #22d3ee,
+    #a855f7,
+    #f472b6,
+    #818cf8,
+    #22d3ee
+  );
+  background-size: 300% 300%;
+  animation: logo-flow 11s ease-in-out infinite reverse;
+  opacity: 0.65;
+}
+
+@keyframes logo-flow {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: hue-rotate(40deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-animated,
+  .logo-animated::before {
+    animation: none;
+  }
+}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Logo from "../components/Logo";
 
 const LINKS = [
   { href: "/admin", label: "Overview", icon: "◈", exact: true },
@@ -24,9 +25,7 @@ export default function AdminSidebar() {
       {/* Desktop sidebar */}
       <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] w-72 shrink-0 flex-col overflow-y-auto rounded-3xl border border-zinc-200 bg-white p-5 shadow-xl shadow-zinc-950/5 md:flex dark:border-white/10 dark:bg-zinc-950">
         <Link href="/" className="flex items-center gap-3 rounded-2xl px-2 py-2">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-cyan-400 text-sm font-black text-white shadow-lg ring-1 ring-white/30">
-            RP
-          </span>
+          <Logo size="md" className="h-11 w-11 rounded-2xl" />
           <span className="flex flex-col leading-tight">
             <span className="text-base font-extrabold tracking-tight">Admin Panel</span>
             <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">

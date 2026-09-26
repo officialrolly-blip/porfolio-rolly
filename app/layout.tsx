@@ -16,6 +16,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Rolly Paredes | Portfolio",
   description: "Portfolio of Rolly Paredes - projects, about, and contact.",
+  icons: {
+    // Animated tab icon (animates in Firefox/Chrome, first frame elsewhere)
+    icon: [
+      { url: "/logo-animated.gif", type: "image/gif" },
+      { url: "/logo-static.png", type: "image/png" },
+    ],
+    shortcut: "/logo-animated.gif",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
