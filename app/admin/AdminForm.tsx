@@ -1,5 +1,12 @@
 "use client";
 import { useState } from "react";
+import {
+  upload,
+  ImageKitAbortError,
+  ImageKitInvalidRequestError,
+  ImageKitServerError,
+  ImageKitUploadNetworkError,
+} from "@imagekit/next";
 import { TABS, inputCls } from "./types";
 import type { Category, ProjectItem } from "./types";
 
@@ -24,30 +31,63 @@ export default function AdminForm(props: Props) {
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState("none");
   const [tried, setTried] = useState("");
+  const [justPublished, setJustPublished] = useState(false);
   const [thumbUrl, setThumbUrl] = useState("");
   const [thumbBusy, setThumbBusy] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoBusy, setVideoBusy] = useState(false);
   const headers = { "Content-Type": "application/json", "x-admin-password": password };
   const label = TABS.find((t) => t.id === tab)?.label ?? tab;
 
+  // Fetches signed, expiring upload credentials from our server route.
+  // The ImageKit private key stays server-side; the browser only gets a token.
+  async function imagekitAuth() {
+    const res = await fetch("/api/upload-auth", { headers: { "x-admin-password": password } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "ImageKit upload authentication failed.");
+    return {
+      token: String(data.token),
+      expire: Number(data.expire),
+      signature: String(data.signature),
+      publicKey: String(data.publicKey),
+    };
+  }
+
+  // Turns SDK-specific upload errors into friendly admin-panel messages.
+  function uploadError(err: unknown): string {
+    if (err instanceof ImageKitAbortError) return "Upload was cancelled.";
+    if (err instanceof ImageKitInvalidRequestError) return `ImageKit rejected the file: ${err.message}`;
+    if (err instanceof ImageKitUploadNetworkError) return "Network error while uploading to ImageKit — try again.";
+    if (err instanceof ImageKitServerError) return `ImageKit error: ${err.message}`;
+    return err instanceof Error ? err.message : "Upload failed.";
+  }
+
   async function handleFile(f: File | null) {
     if (!f) return;
+    if (f.size > 5 * 1024 * 1024) {
+      props.setNotice("Image must be under 5MB.");
+      return;
+    }
     setPreviewLocal(URL.createObjectURL(f));
     setBusy("upload");
-    props.setNotice("Uploading image...");
+    props.setNotice("Uploading image to ImageKit...");
     try {
-      const form = new FormData();
-      form.append("file", f);
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "x-admin-password": password },
-        body: form,
+      const auth = await imagekitAuth();
+      const result = await upload({
+        file: f,
+        fileName: `work-${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]+/g, "-")}`,
+        folder: `/${tab}-works`,
+        ...auth,
+        onProgress: (e) => {
+          const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+          props.setNotice(`Uploading to ImageKit... ${pct}%`);
+        },
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Upload failed.");
-      setImageUrl(data.url);
-      props.setNotice("Image uploaded - now click Generate description.");
+      if (!result.url) throw new Error("ImageKit did not return a URL for this upload.");
+      setImageUrl(result.url);
+      props.setNotice("Image uploaded to ImageKit - now click Generate description.");
     } catch (err) {
-      props.setNotice(err instanceof Error ? err.message : "Upload failed.");
+      props.setNotice(uploadError(err));
     }
     setBusy("none");
   }
@@ -126,14 +166,52 @@ export default function AdminForm(props: Props) {
     setThumbBusy(false);
   }
 
+  async function handleVideo(f: File | null) {
+    if (!f) return;
+    if (!f.type.startsWith("video/")) {
+      props.setNotice("That file is not a video — pick an MP4, WebM, or MOV file.");
+      return;
+    }
+    if (f.size > 100 * 1024 * 1024) {
+      props.setNotice("Video must be under 100MB.");
+      return;
+    }
+    setVideoBusy(true);
+    setVideoUrl("");
+    props.setNotice("Uploading video to ImageKit...");
+    try {
+      const auth = await imagekitAuth();
+      const result = await upload({
+        file: f,
+        fileName: `intro-${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]+/g, "-")}`,
+        folder: "/video-intros",
+        ...auth,
+        onProgress: (e) => {
+          const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+          props.setNotice(`Uploading video to ImageKit... ${pct}%`);
+        },
+      });
+      if (!result.url) throw new Error("ImageKit did not return a URL for this video.");
+      setVideoUrl(result.url);
+      props.setNotice("Video uploaded to ImageKit - now click Generate description.");
+    } catch (err) {
+      props.setNotice(uploadError(err));
+    }
+    setVideoBusy(false);
+  }
+
   async function publish(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) {
       props.setNotice("Title required.");
       return;
     }
-    if (tab !== "dev" && !imageUrl) {
+    if (tab !== "dev" && tab !== "video" && !imageUrl) {
       props.setNotice("Upload an image first.");
+      return;
+    }
+    if (tab === "video" && !videoUrl) {
+      props.setNotice("Upload your intro video first.");
       return;
     }
     if (tab === "dev" && !url.trim()) {
@@ -158,11 +236,14 @@ export default function AdminForm(props: Props) {
           url: tab === "dev" ? pageUrl : null,
           techStack: tab === "dev" ? techStack : [],
           thumbnailUrl: thumbUrl || null,
+          videoUrl: videoUrl || null,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Publish failed.");
       props.onPublished(data.project);
+      setJustPublished(true);
+      setTimeout(() => setJustPublished(false), 6000);
       setTitle("");
       setTags("");
       setMetric("");
@@ -173,6 +254,8 @@ export default function AdminForm(props: Props) {
       setDescription("");
       setTried("");
       setThumbUrl("");
+      setVideoUrl("");
+      setVideoBusy(false);
       props.setNotice("Published - live in Selected work.");
     } catch (err) {
       props.setNotice(err instanceof Error ? err.message : "Publish failed.");
@@ -189,7 +272,24 @@ export default function AdminForm(props: Props) {
         </span>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Project title" className={inputCls} />
       </label>
-      {tab === "dev" ? (
+      {tab === "video" ? (
+        <div className="space-y-5">
+          <div>
+            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Intro video (uploads to ImageKit)</span>
+            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-zinc-50 px-4 py-8 text-center text-sm transition hover:bg-zinc-100 dark:bg-black/20">
+              <input type="file" accept="video/*" className="hidden" onChange={(e) => handleVideo(e.target.files?.[0] ?? null)} />
+              <span className="font-bold">{videoBusy ? "Uploading..." : videoUrl ? "Replace video" : "Click to upload video"}</span>
+              <span className="text-xs opacity-70">MP4 / WebM / MOV up to 100MB</span>
+            </label>
+            {videoUrl ? (
+              // eslint-disable-next-line jsx-a11y/media-has-caption
+              <video src={videoUrl} controls preload="metadata" className="mt-3 aspect-video w-full rounded-2xl border border-zinc-200 bg-black object-contain" />
+            ) : (
+              <p className="mt-2 text-[11px] leading-5 text-zinc-500">No video yet — upload one and it auto-saves to ImageKit, then shows in the Video Introduction section.</p>
+            )}
+          </div>
+        </div>
+      ) : tab === "dev" ? (
         <div className="space-y-5">
           <label className="block">
             <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Project URL</span>
@@ -214,21 +314,20 @@ export default function AdminForm(props: Props) {
                   onChange={async (e) => {
                     const f = e.target.files?.[0] ?? null;
                     if (!f) return;
-                    props.setNotice("Uploading manual thumbnail...");
+                    props.setNotice("Uploading manual thumbnail to ImageKit...");
                     try {
-                      const form = new FormData();
-                      form.append("file", f);
-                      const res = await fetch("/api/upload", {
-                        method: "POST",
-                        headers: { "x-admin-password": password },
-                        body: form,
+                      const auth = await imagekitAuth();
+                      const result = await upload({
+                        file: f,
+                        fileName: `thumb-${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]+/g, "-")}`,
+                        folder: "/dev-thumbnails",
+                        ...auth,
                       });
-                      const data = await res.json().catch(() => ({}));
-                      if (!res.ok) throw new Error(data.error || "Upload failed.");
-                      setThumbUrl(data.url);
-                      props.setNotice("Manual thumbnail uploaded - preview below.");
+                      if (!result.url) throw new Error("ImageKit did not return a URL for this upload.");
+                      setThumbUrl(result.url);
+                      props.setNotice("Manual thumbnail uploaded to ImageKit - preview below.");
                     } catch (err) {
-                      props.setNotice(err instanceof Error ? err.message : "Upload failed.");
+                      props.setNotice(uploadError(err));
                     }
                   }}
                 />
@@ -273,14 +372,27 @@ export default function AdminForm(props: Props) {
       </label>
       <label className="block">
         <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Description</span>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Click Generate or write your own..." className={inputCls + " min-h-[120px] resize-y py-3 leading-6"} />
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder={tab === "video" ? "Click Generate for a 1st-person intro script, or write your own..." : "Click Generate or write your own..."} className={inputCls + " min-h-[120px] resize-y py-3 leading-6"} />
       </label>
+      {busy === "save" && (
+        <p role="status" className="flex items-center gap-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/10 px-4 py-3 text-sm font-semibold text-zinc-700 dark:text-zinc-200">
+          <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-fuchsia-500 border-t-transparent" />
+          Publishing your work... uploading details, one moment.
+        </p>
+      )}
+      {justPublished && busy === "none" && (
+        <p className="flex animate-pulse items-center gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+          <span>✓</span> Published - live in {tab === "video" ? "Video Introduction" : "Selected work"}.
+        </p>
+      )}
       <div className="grid gap-2">
-        <button type="button" onClick={generate} disabled={busy === "ai"} className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 px-5 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-60">
+        <button type="button" onClick={generate} disabled={busy !== "none"} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 px-5 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0">
+          {busy === "ai" && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
           {busy === "ai" ? "Writing... please wait" : "Generate description"}
         </button>
-        <button type="submit" disabled={busy === "save"} className="inline-flex h-12 items-center justify-center rounded-full bg-zinc-900 px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60 dark:bg-white dark:text-zinc-900">
-          {busy === "save" ? "Publishing..." : "Publish work"}
+        <button type="submit" disabled={busy !== "none"} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0 dark:bg-white dark:text-zinc-900">
+          {busy === "save" && <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />}
+          {busy === "save" ? "Publishing..." : justPublished ? "Published ✓" : "Publish work"}
         </button>
       </div>
       {tried && <p className="rounded-xl bg-zinc-100 px-3 py-2 font-mono text-[11px] text-zinc-500">{tried}</p>}

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ImageKitProvider } from "@imagekit/next";
 import "./globals.css";
 import SiteShell from "./components/SiteShell";
+import { IMAGEKIT_URL_ENDPOINT } from "@/lib/imagekit";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +36,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <SiteShell>{children}</SiteShell>
+        <ImageKitProvider urlEndpoint={IMAGEKIT_URL_ENDPOINT}>
+          <SiteShell>{children}</SiteShell>
+        </ImageKitProvider>
       </body>
     </html>
   );

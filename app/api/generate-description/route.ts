@@ -103,7 +103,9 @@ export async function POST(req: Request) {
   const prompt =
     category === "dev"
       ? `Write a portfolio description for a full-stack project named "${title}". Tech stack: ${techStack.join(", ") || "modern web stack"}. ${url ? `Live URL: ${url}.` : ""} Focus on what was built and the outcome.`
-      : `Write a portfolio description for a ${category === "social" ? "social media" : "graphic design"} project named "${title}". Focus areas/tags: ${tags.join(", ") || "creative work"}. Focus on results and creative problem-solving.`;
+      : category === "video"
+        ? `Write a warm, confident first-person description for a video introduction titled "${title}" — a short self-intro video by Rolly Paredes (Social Media Manager, Graphic Artist, Full-Stack Developer). Use "I" statements. 1-2 sentences, max 40 words.`
+        : `Write a portfolio description for a ${category === "social" ? "social media" : "graphic design"} project named "${title}". Focus areas/tags: ${tags.join(", ") || "creative work"}. Focus on results and creative problem-solving.`;
   try {
     const { text, model } = await callOpenRouter(prompt, system);
     return Response.json({ description: text, model });

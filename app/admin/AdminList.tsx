@@ -40,6 +40,15 @@ export default function AdminList({ tab, visible, loading, load, remove }: {
                 className="h-32 w-full object-cover object-top"
               />
             )}
+            {p.videoUrl && (
+              // eslint-disable-next-line jsx-a11y/media-has-caption
+              <video
+                src={p.videoUrl}
+                controls
+                preload="metadata"
+                className="aspect-video w-full bg-black object-contain"
+              />
+            )}
             <div className="flex flex-1 flex-col p-4">
               <p className="truncate text-sm font-extrabold">{p.title}</p>
               <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-xs leading-5 text-zinc-500 dark:text-zinc-400">

@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { Image as IKImage } from "@imagekit/next";
+import { isImageKitSrc } from "@/lib/imagekit";
 type TabId = "social" | "design" | "dev";
 type CardProps = { m: string; mCls: string; t: string; d: string; tags: string[]; top: ReactNode; link?: string | null };
 function Card({ m, mCls, t, d, tags, top, link }: CardProps) {
@@ -46,10 +48,28 @@ function useProjects() {
   return items;
 }
 
-// eslint-disable-next-line @next/next/no-img-element
-const Img = ({ src, alt }: { src: string; alt: string }) => (
-  <img src={src} alt={alt} loading="lazy" className="h-36 w-full object-cover object-top" />
-);
+// ImageKit-hosted images are served through the optimized <Image> component
+// (responsive srcset + on-the-fly CDN resizing). Local /uploads files and
+// third-party screenshot URLs fall back to a plain <img> — the ImageKit
+// component can only build URLs for its own endpoint.
+const Img = ({ src, alt }: { src: string; alt: string }) => {
+  if (isImageKitSrc(src)) {
+    return (
+      <IKImage
+        src={src}
+        alt={alt}
+        width={640}
+        height={360}
+        sizes="(max-width: 768px) 100vw, 33vw"
+        className="h-44 w-full object-cover object-top"
+      />
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} loading="lazy" className="h-44 w-full object-cover object-top" />
+  );
+};
 
 // Full-stack thumbnail with resilient fallbacks:
 // 1. saved local/remote thumbnail (repairs old broken encoded thum.io URLs)
@@ -98,6 +118,21 @@ function repairStored(stored: string | null | undefined): string | null {
   return stored;
 }
 
+// Shared card top chrome: the macOS-style browser bar with 3 dots.
+// Used by ALL grids so social / design / dev cards look identical.
+function BrowserBar() {
+  return (
+    <div className="border-b border-white/20 px-5 py-3 dark:border-white/10">
+      <div className="flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+        <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+        <span className="ml-2 font-mono text-[11px] text-zinc-500">preview</span>
+      </div>
+    </div>
+  );
+}
+
 function SocialGrid({ items }: { items: P[] | null }) {
   const live = (items ?? []).filter((p) => p.category === "social");
   return (
@@ -111,7 +146,7 @@ function SocialGrid({ items }: { items: P[] | null }) {
           <p className="rounded-2xl border border-white/20 bg-white/40 p-5 text-sm text-zinc-500 dark:bg-white/5">No works yet — check back soon.</p>
         ) : (
           live.map((c) => (
-            <Card key={c.id} m={c.metric || "New"} mCls="bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" t={c.title} d={c.description} tags={c.tags} top={c.imageUrl ? <Img src={c.imageUrl} alt={c.title} /> : <div className="flex h-36 items-center justify-center bg-gradient-to-br from-violet-500/30 via-fuchsia-500/25 to-cyan-400/25 font-mono text-xs text-zinc-600 dark:text-zinc-300">SM preview image</div>} />
+            <Card key={c.id} m={c.metric || "New"} mCls="bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" t={c.title} d={c.description} tags={c.tags} top={<div><BrowserBar />{c.imageUrl ? <Img src={c.imageUrl} alt={c.title} /> : <div className="flex h-44 items-center justify-center bg-gradient-to-br from-violet-500/30 via-fuchsia-500/25 to-cyan-400/25 font-mono text-xs text-zinc-600 dark:text-zinc-300">SM preview image</div>}</div>} />
           ))
         )}
       </div>
@@ -132,7 +167,7 @@ function DesignGrid({ items }: { items: P[] | null }) {
           <p className="rounded-2xl border border-white/20 bg-white/40 p-5 text-sm text-zinc-500 dark:bg-white/5">No works yet — check back soon.</p>
         ) : (
           live.map((c) => (
-            <Card key={c.id} m={c.metric || "New"} mCls="bg-violet-500/15 text-violet-600 dark:text-violet-300" t={c.title} d={c.description} tags={c.tags} top={c.imageUrl ? <Img src={c.imageUrl} alt={c.title} /> : <div className="flex h-36 items-center justify-center bg-zinc-950 font-mono text-xs text-zinc-400">Design preview image</div>} />
+            <Card key={c.id} m={c.metric || "New"} mCls="bg-violet-500/15 text-violet-600 dark:text-violet-300" t={c.title} d={c.description} tags={c.tags} top={<div><BrowserBar />{c.imageUrl ? <Img src={c.imageUrl} alt={c.title} /> : <div className="flex h-44 items-center justify-center bg-zinc-950 font-mono text-xs text-zinc-400">Design preview image</div>}</div>} />
           ))
         )}
       </div>
@@ -142,16 +177,6 @@ function DesignGrid({ items }: { items: P[] | null }) {
 function DevGrid({ items }: { items: P[] | null }) {
   const live = (items ?? []).filter((p) => p.category === "dev");
   // SAME card UI — only addition is the auto front-page thumbnail image on top
-  const browserBar = (
-    <div className="border-b border-white/20 px-5 py-3 dark:border-white/10">
-      <div className="flex items-center gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
-        <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-        <span className="ml-2 font-mono text-[11px] text-zinc-500">preview</span>
-      </div>
-    </div>
-  );
   return (
     <div>
       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Full-Stack Projects</h3>
@@ -173,7 +198,7 @@ function DevGrid({ items }: { items: P[] | null }) {
               link={c.url}
               top={
                 <div>
-                  {browserBar}
+                  <BrowserBar />
                   <DevThumb title={c.title} stored={c.thumbnailUrl ?? c.imageUrl} pageUrl={c.url} />
                 </div>
               }

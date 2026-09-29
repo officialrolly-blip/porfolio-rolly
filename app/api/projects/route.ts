@@ -31,6 +31,7 @@ export async function POST(req: Request) {
     url: body.url ? String(body.url) : null,
     techStack: Array.isArray(body.techStack) ? body.techStack.map(String).slice(0, 10) : [],
     thumbnailUrl: body.thumbnailUrl ? String(body.thumbnailUrl) : null,
+    videoUrl: body.videoUrl ? String(body.videoUrl) : null,
     createdAt: now,
   };
   items.unshift(item);

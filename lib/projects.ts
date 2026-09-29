@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-export type ProjectCategory = "social" | "design" | "dev";
+export type ProjectCategory = "social" | "design" | "dev" | "video";
 
 export type ProjectItem = {
   id: string;
@@ -15,6 +15,8 @@ export type ProjectItem = {
   url?: string | null;
   techStack?: string[];
   thumbnailUrl?: string | null;
+  // video-intro only
+  videoUrl?: string | null;
   createdAt: string;
 };
 

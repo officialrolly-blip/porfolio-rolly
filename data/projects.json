@@ -1,5 +1,32 @@
 [
   {
+    "id": "p-1790640000159-aqnup",
+    "category": "video",
+    "title": "Sample Video",
+    "description": "I'm Rolly Paredes, a social media manager, graphic artist, and full-stack developer passionate about crafting engaging digital experiences that drive results.",
+    "tags": [],
+    "metric": "New",
+    "imageUrl": null,
+    "url": null,
+    "techStack": [],
+    "thumbnailUrl": null,
+    "videoUrl": "https://ik.imagekit.io/rollyparedes/video-intros/intro-1790639971024-sample-video_5TwVxoLMF.mp4",
+    "createdAt": "2026-09-29T00:00:00.159Z"
+  },
+  {
+    "id": "p-1790638268171-03iet",
+    "category": "social",
+    "title": "Calendar for Monthly Reels",
+    "description": "Built Calendar for Monthly Reels to streamline creative planning, improve posting consistency, and drive engagement through a repeatable, visually driven content system.",
+    "tags": [],
+    "metric": "+220",
+    "imageUrl": "https://ik.imagekit.io/rollyparedes/social-works/work-1790638230444-810182919_1061931563316511_3019287219358897670_n_N0-1_lm6c.jpg",
+    "url": null,
+    "techStack": [],
+    "thumbnailUrl": null,
+    "createdAt": "2026-09-28T23:31:08.171Z"
+  },
+  {
     "id": "p-1790424655726-zjqwy",
     "category": "dev",
     "title": "My Personal Portfolio",
