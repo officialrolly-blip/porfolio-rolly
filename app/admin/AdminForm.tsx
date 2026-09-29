@@ -35,6 +35,8 @@ export default function AdminForm(props: Props) {
   const [justPublished, setJustPublished] = useState(false);
   const [thumbUrl, setThumbUrl] = useState("");
   const [thumbBusy, setThumbBusy] = useState(false);
+  const [socialUrl, setSocialUrl] = useState("");
+  const [socialCaptureBusy, setSocialCaptureBusy] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
   const [videoBusy, setVideoBusy] = useState(false);
   const headers = { "Content-Type": "application/json", "x-admin-password": password };
@@ -140,6 +142,35 @@ export default function AdminForm(props: Props) {
       props.setAiError(msg);
       props.setNotice("AI failed - see the amber box above.");
     }
+    setBusy("none");
+  }
+
+  async function captureSocial() {
+    const pageUrl = socialUrl.trim();
+    if (!/^https?:\/\//i.test(pageUrl)) {
+      props.setNotice("Paste a valid https:// link first, then capture.");
+      return;
+    }
+    setSocialCaptureBusy(true);
+    setBusy("upload");
+    props.setNotice("Capturing link preview... then uploading to ImageKit.");
+    try {
+      const res = await fetch("/api/capture", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ url: pageUrl, folder: `/${tab}-works` }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Capture failed.");
+      const captured: string = data.imageUrl || data.thumbnailUrl;
+      if (!captured) throw new Error("Capture did not return an image.");
+      setImageUrl(captured);
+      setPreviewLocal("");
+      props.setNotice("Link captured + uploaded to ImageKit - preview below. Now click Generate description.");
+    } catch (err) {
+      props.setNotice(err instanceof Error ? err.message : "Capture failed.");
+    }
+    setSocialCaptureBusy(false);
     setBusy("none");
   }
 
@@ -255,6 +286,8 @@ export default function AdminForm(props: Props) {
       setDescription("");
       setTried("");
       setThumbUrl("");
+      setSocialUrl("");
+      setSocialCaptureBusy(false);
       setVideoUrl("");
       setVideoBusy(false);
       props.setNotice("Published - live in Selected work.");
@@ -392,12 +425,33 @@ export default function AdminForm(props: Props) {
       ) : (
         <div className="space-y-5">
           <div>
-            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Image</span>
+            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Image — upload or paste a link</span>
             <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-zinc-50 px-4 py-8 text-center text-sm transition hover:bg-zinc-100 dark:bg-black/20">
               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
               <span className="font-bold">Click to upload image</span>
-              <span className="text-xs opacity-70">PNG/JPG up to 5MB</span>
+              <span className="text-xs opacity-70">PNG/JPG up to 5MB — or paste a link below</span>
             </label>
+            <div className="mt-3 flex gap-2">
+              <input
+                value={socialUrl}
+                onChange={(e) => setSocialUrl(e.target.value)}
+                placeholder="https://facebook.com/your-post or instagram.com/..."
+                inputMode="url"
+                className={inputCls + " h-11"}
+              />
+              <button
+                type="button"
+                onClick={captureSocial}
+                disabled={socialCaptureBusy}
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 text-xs font-bold text-white transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60 dark:bg-white dark:text-zinc-900"
+              >
+                {socialCaptureBusy && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />}
+                {socialCaptureBusy ? "Capturing..." : "Capture link"}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+              No image file? Paste the post/profile URL and hit <span className="font-bold">Capture link</span> — we screenshot it and auto-upload to ImageKit.
+            </p>
             {(previewLocal || imageUrl) && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={previewLocal || imageUrl} alt="preview" className="mt-3 h-44 w-full rounded-2xl border border-zinc-200 object-cover" />

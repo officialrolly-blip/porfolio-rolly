@@ -45,11 +45,10 @@ export async function GET(req: Request) {
   return Response.redirect(target, 302);
 }
 
-// Capture the front page server-side and save it to /public/uploads.
-// Returns the local /uploads/xxx.jpg URL, or throws.
-export async function captureAndSave(pageUrl: string): Promise<string> {
-  const fs = await import("node:fs/promises");
-  const path = await import("node:path");
+// Capture the front page server-side and return raw bytes (no disk write,
+// so it works on serverless hosts like Vercel where the filesystem is ephemeral).
+// Returns the image buffer + content type, or throws.
+export async function captureBytes(pageUrl: string): Promise<{ buf: Buffer; contentType: string }> {
   const sources = [wpMshotsUrl(pageUrl), thumUrl(pageUrl)];
   let lastError = "unknown";
   for (const src of sources) {
@@ -69,15 +68,25 @@ export async function captureAndSave(pageUrl: string): Promise<string> {
         lastError = `${src} -> image too small (${buf.length}b, probably a placeholder)`;
         continue;
       }
-      const name = `shot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
-      const dir = path.join(process.cwd(), "public", "uploads");
-      await fs.mkdir(dir, { recursive: true });
-      await fs.writeFile(path.join(dir, name), buf);
-      return `/uploads/${name}`;
+      return { buf, contentType: ct.split(";")[0].trim() || "image/jpeg" };
     } catch (e) {
       lastError = e instanceof Error ? e.message : "fetch failed";
     }
   }
   throw new Error(`Could not capture a screenshot. ${lastError}`);
+}
+
+// Capture the front page server-side and save it to /public/uploads.
+// Returns the local /uploads/xxx.jpg URL, or throws.
+// (Kept as a fallback for environments without ImageKit configured.)
+export async function captureAndSave(pageUrl: string): Promise<string> {
+  const fs = await import("node:fs/promises");
+  const path = await import("node:path");
+  const { buf } = await captureBytes(pageUrl);
+  const name = `shot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+  const dir = path.join(process.cwd(), "public", "uploads");
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(path.join(dir, name), buf);
+  return `/uploads/${name}`;
 }
 
