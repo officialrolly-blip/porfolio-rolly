@@ -9,6 +9,7 @@ import {
 } from "@imagekit/next";
 import { TABS, inputCls } from "./types";
 import type { Category, ProjectItem } from "./types";
+import SecureVideo from "../components/SecureVideo";
 
 type Props = {
   tab: Category;
@@ -323,8 +324,9 @@ export default function AdminForm(props: Props) {
               <span className="text-xs opacity-70">MP4 / WebM / MOV up to 100MB</span>
             </label>
             {videoUrl ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video src={videoUrl} controls preload="metadata" className="mt-3 aspect-video w-full rounded-2xl border border-zinc-200 bg-black object-contain" />
+              <div onContextMenu={(e) => e.preventDefault()}>
+                <SecureVideo src={videoUrl} title={title || "Intro preview"} className="mt-3 overflow-hidden rounded-2xl border border-zinc-200" />
+              </div>
             ) : (
               <p className="mt-2 text-[11px] leading-5 text-zinc-500">No video yet — upload one and it auto-saves to ImageKit, then shows in the Video Introduction section.</p>
             )}

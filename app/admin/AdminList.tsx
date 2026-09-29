@@ -1,4 +1,5 @@
 "use client";
+import SecureVideo from "../components/SecureVideo";
 import { TABS, type Category, type ProjectItem } from "./types";
 
 export default function AdminList({ tab, visible, loading, load, remove }: {
@@ -41,13 +42,9 @@ export default function AdminList({ tab, visible, loading, load, remove }: {
               />
             )}
             {p.videoUrl && (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video
-                src={p.videoUrl}
-                controls
-                preload="metadata"
-                className="aspect-video w-full bg-black object-contain"
-              />
+              <div onContextMenu={(e) => e.preventDefault()}>
+                <SecureVideo src={p.videoUrl} title={p.title} className="[&_video]:aspect-video" />
+              </div>
             )}
             <div className="flex flex-1 flex-col p-4">
               <p className="truncate text-sm font-extrabold">{p.title}</p>
