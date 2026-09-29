@@ -264,7 +264,48 @@ export default function AdminForm(props: Props) {
   }
 
   return (
-    <form onSubmit={publish} className="space-y-5">
+    <>
+      {busy === "save" && (
+        <div className="fixed inset-0 z-[90] grid place-items-center bg-zinc-950/70 p-4 backdrop-blur-sm" role="status" aria-live="polite">
+          <div className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-900 p-8 text-center text-white shadow-2xl">
+            <div className="relative mx-auto grid h-20 w-20 place-items-center">
+              <span className="absolute inset-0 animate-spin rounded-full border-4 border-white/10 border-t-fuchsia-500" />
+              <span className="absolute inset-2 animate-ping rounded-full bg-fuchsia-500/20" />
+              <span className="relative grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-violet-600 via-fuchsia-500 to-cyan-400 text-lg font-black">
+                ✦
+              </span>
+            </div>
+            <p className="mt-5 text-lg font-extrabold tracking-tight">Publishing your work</p>
+            <p className="mt-1 flex items-center justify-center gap-1 text-sm text-zinc-300">
+              Saving to your showcase
+              <span className="flex gap-1">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-fuchsia-400" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-fuchsia-400" style={{ animationDelay: "150ms" }} />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-fuchsia-400" style={{ animationDelay: "300ms" }} />
+              </span>
+            </p>
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full w-1/2 animate-pulse rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-400" />
+            </div>
+            <div className="mt-5 space-y-2 text-left text-xs font-semibold">
+              <p className="flex items-center gap-2 text-emerald-300">
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500/20 text-[11px]">✓</span>
+                Details validated
+              </p>
+              <p className="flex items-center gap-2 text-white">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Saving {tab === "video" ? "video intro" : label}...
+              </p>
+              <p className="flex items-center gap-2 text-zinc-400">
+                <span className="h-4 w-4 rounded-full border-2 border-white/15" />
+                Refreshing public page
+              </p>
+            </div>
+            <p className="mt-5 text-[11px] text-zinc-400">Please keep this tab open — almost there.</p>
+          </div>
+        </div>
+      )}
+      <form onSubmit={publish} className={"space-y-5 " + (busy === "save" ? "pointer-events-none select-none opacity-70" : "")} aria-busy={busy === "save"}>
       <p className="text-sm font-bold">New {label} work</p>
       <label className="block">
         <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">
@@ -396,6 +437,7 @@ export default function AdminForm(props: Props) {
         </button>
       </div>
       {tried && <p className="rounded-xl bg-zinc-100 px-3 py-2 font-mono text-[11px] text-zinc-500">{tried}</p>}
-    </form>
+      </form>
+    </>
   );
 }
