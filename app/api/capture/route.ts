@@ -2,6 +2,8 @@ import { isAdminAuthorized } from "@/lib/projects";
 import { captureAndSave, captureBytes } from "@/app/api/thumbnail/route";
 
 export const runtime = "nodejs";
+// Screenshot retries + ImageKit upload can exceed the default 10s limit.
+export const maxDuration = 60;
 
 // POST { url, folder? } -> { thumbnailUrl, imageUrl }
 // Captures the front page server-side, uploads the bytes straight to
@@ -36,7 +38,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { buf, contentType } = await captureBytes(pageUrl);
+    const { buf, contentType, stillGenerating } = await captureBytes(pageUrl);
     // ImageKit server-side upload via plain fetch (no new dependency):
     // POST multipart/form-data to https://upload.imagekit.io/api/v1/files/upload
     // with file (base64 or binary), fileName, folder + Basic auth (privateKey:).
@@ -54,7 +56,14 @@ export async function POST(req: Request) {
       throw new Error(typeof ikData.message === "string" ? ikData.message : `ImageKit upload failed (HTTP ${ikRes.status}).`);
     }
     const thumbnailUrl: string = ikData.url;
-    return Response.json({ thumbnailUrl, imageUrl: thumbnailUrl });
+    return Response.json({
+      thumbnailUrl,
+      imageUrl: thumbnailUrl,
+      stillGenerating,
+      warning: stillGenerating
+        ? "The screenshot service is still rendering this page (shows a 'generating preview' image). Wait ~20 seconds, then hit Capture link again to grab the real page."
+        : undefined,
+    });
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "Capture failed." }, { status: 502 });
   }

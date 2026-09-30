@@ -166,7 +166,11 @@ export default function AdminForm(props: Props) {
       if (!captured) throw new Error("Capture did not return an image.");
       setImageUrl(captured);
       setPreviewLocal("");
-      props.setNotice("Link captured + uploaded to ImageKit - preview below. Now click Generate description.");
+      props.setNotice(
+        typeof data.warning === "string" && data.warning
+          ? data.warning
+          : "Link captured + uploaded to ImageKit - preview below. Now click Generate description.",
+      );
     } catch (err) {
       props.setNotice(err instanceof Error ? err.message : "Capture failed.");
     }
