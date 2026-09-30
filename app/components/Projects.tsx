@@ -48,6 +48,43 @@ function useProjects() {
   return items;
 }
 
+// Skeleton card mirrors the real Card layout (browser bar + image + body)
+// so tabs never sit empty while /api/projects loads or while switching tabs.
+function CardSkeleton() {
+  return (
+    <div aria-hidden className="flex animate-pulse flex-col overflow-hidden rounded-3xl border border-white/25 bg-white/10 shadow backdrop-blur-xl dark:border-white/15 dark:bg-white/[0.06]">
+      <div className="flex items-center gap-1.5 border-b border-white/20 bg-black/5 px-4 py-2.5 dark:border-white/10 dark:bg-white/5">
+        <span className="h-2.5 w-2.5 rounded-full bg-zinc-300 dark:bg-white/20" />
+        <span className="h-2.5 w-2.5 rounded-full bg-zinc-300 dark:bg-white/20" />
+        <span className="h-2.5 w-2.5 rounded-full bg-zinc-300 dark:bg-white/20" />
+        <span className="ml-2 h-3 w-20 rounded-full bg-zinc-200 dark:bg-white/10" />
+      </div>
+      <div className="h-44 w-full bg-gradient-to-br from-zinc-200 via-zinc-100 to-zinc-200 dark:from-white/10 dark:via-white/5 dark:to-white/10" />
+      <div className="flex flex-1 flex-col p-6">
+        <span className="h-5 w-24 rounded-full bg-zinc-200 dark:bg-white/10" />
+        <span className="mt-3 h-4 w-3/4 rounded-md bg-zinc-200 dark:bg-white/10" />
+        <span className="mt-2 h-3 w-full rounded-md bg-zinc-100 dark:bg-white/5" />
+        <span className="mt-1.5 h-3 w-5/6 rounded-md bg-zinc-100 dark:bg-white/5" />
+        <div className="mt-4 flex gap-2">
+          <span className="h-6 w-16 rounded-full bg-zinc-100 dark:bg-white/5" />
+          <span className="h-6 w-20 rounded-full bg-zinc-100 dark:bg-white/5" />
+          <span className="h-6 w-14 rounded-full bg-zinc-100 dark:bg-white/5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonGrid({ count = 3 }: { count?: number }) {
+  return (
+    <div role="status" aria-label="Loading projects" className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <CardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
 // ImageKit-hosted images are served through the optimized <Image> component
 // (responsive srcset + on-the-fly CDN resizing). Local /uploads files and
 // third-party screenshot URLs fall back to a plain <img> — the ImageKit
@@ -134,7 +171,8 @@ function BrowserBar() {
 }
 
 function SocialGrid({ items }: { items: P[] | null }) {
-  const live = (items ?? []).filter((p) => p.category === "social");
+  if (items === null) return <SkeletonGrid />;
+  const live = items.filter((p) => p.category === "social");
   return (
     <div>
       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Social Media Manager</h3>
@@ -155,7 +193,8 @@ function SocialGrid({ items }: { items: P[] | null }) {
 }
 
 function DesignGrid({ items }: { items: P[] | null }) {
-  const live = (items ?? []).filter((p) => p.category === "design");
+  if (items === null) return <SkeletonGrid />;
+  const live = items.filter((p) => p.category === "design");
   return (
     <div>
       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Graphic Design</h3>
@@ -175,7 +214,8 @@ function DesignGrid({ items }: { items: P[] | null }) {
   );
 }
 function DevGrid({ items }: { items: P[] | null }) {
-  const live = (items ?? []).filter((p) => p.category === "dev");
+  if (items === null) return <SkeletonGrid />;
+  const live = items.filter((p) => p.category === "dev");
   // SAME card UI — only addition is the auto front-page thumbnail image on top
   return (
     <div>
@@ -213,6 +253,7 @@ export default function Projects() {
   const ref = useRef<HTMLElement | null>(null);
   const [show, setShow] = useState(false);
   const [tab, setTab] = useState<TabId>("social");
+  const [switching, setSwitching] = useState(false);
   const items = useProjects();
   useEffect(() => {
     const el = ref.current;
@@ -247,16 +288,31 @@ export default function Projects() {
         </p>
         <div className={`${rise("[transition-delay:250ms]")} mt-8 flex flex-wrap gap-2`}>
           {tabs.map((t) => (
-            <button key={t.id} type="button" onClick={() => setTab(t.id)} className={`inline-flex h-11 items-center gap-2.5 rounded-full border px-4 text-sm font-semibold backdrop-blur-xl transition hover:-translate-y-0.5 ${tab === t.id ? "border-white/30 bg-zinc-900 text-white shadow-xl dark:bg-white dark:text-zinc-900" : "border-white/25 bg-white/10 text-zinc-700 shadow dark:border-white/15 dark:bg-white/[0.06] dark:text-zinc-200"}`}>
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => {
+                if (t.id === tab || switching) return;
+                setSwitching(true);
+                setTab(t.id);
+                // Brief skeleton flash so a tab change never shows a stale/empty grid.
+                setTimeout(() => setSwitching(false), 350);
+              }} className={`inline-flex h-11 items-center gap-2.5 rounded-full border px-4 text-sm font-semibold backdrop-blur-xl transition hover:-translate-y-0.5 ${tab === t.id ? "border-white/30 bg-zinc-900 text-white shadow-xl dark:bg-white dark:text-zinc-900" : "border-white/25 bg-white/10 text-zinc-700 shadow dark:border-white/15 dark:bg-white/[0.06] dark:text-zinc-200"}`}>
               <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-violet-500 via-fuchsia-500 to-cyan-400 font-mono text-[10px] font-black text-white">{t.tag}</span>
               {t.label}
             </button>
           ))}
         </div>
         <div className="mt-10" key={tab}>
-          {tab === "social" && <SocialGrid items={items} />}
-          {tab === "design" && <DesignGrid items={items} />}
-          {tab === "dev" && <DevGrid items={items} />}
+          {switching || items === null ? (
+            <SkeletonGrid />
+          ) : (
+            <>
+              {tab === "social" && <SocialGrid items={items} />}
+              {tab === "design" && <DesignGrid items={items} />}
+              {tab === "dev" && <DevGrid items={items} />}
+            </>
+          )}
         </div>
       </div>
     </section>
