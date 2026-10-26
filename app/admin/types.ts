@@ -2,12 +2,13 @@ export type Category = "social" | "design" | "dev" | "video";
 export type ProjectItem = {
   id: string; category: Category; title: string; description: string;
   tags: string[]; metric: string; imageUrl: string | null;
+  galleryUrls?: string[];
   url?: string | null; techStack?: string[]; thumbnailUrl?: string | null;
   videoUrl?: string | null; createdAt: string;
 };
 export const TABS = [
   { id: "social" as Category, tag: "SM", label: "Social Media", hint: "Step 1: title + image. Step 2: generate description, review, publish." },
-  { id: "design" as Category, tag: "GD", label: "Graphic Design", hint: "Step 1: title + image. Step 2: generate description, review, publish." },
+  { id: "design" as Category, tag: "GD", label: "Graphic Design", hint: "Step 1: title + gallery images. Step 2: generate description, review, publish." },
   { id: "dev" as Category, tag: "DEV", label: "Full-Stack", hint: "Step 1: URL + name + stack (thumbnail auto-creates). Step 2: generate description, publish." },
   { id: "video" as Category, tag: "VI", label: "Video Intro", hint: "Step 1: title + video (auto-uploads to ImageKit). Step 2: generate description, review, publish." },
 ];

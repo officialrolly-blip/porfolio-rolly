@@ -11,6 +11,7 @@ export type ProjectItem = {
   tags: string[];
   metric: string;
   imageUrl: string | null;
+  galleryUrls?: string[];
   // full-stack only
   url?: string | null;
   techStack?: string[];

@@ -28,6 +28,7 @@ export default function AdminForm(props: Props) {
   const [url, setUrl] = useState("");
   const [tech, setTech] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [previewLocal, setPreviewLocal] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState("none");
@@ -93,6 +94,49 @@ export default function AdminForm(props: Props) {
       props.setNotice(uploadError(err));
     }
     setBusy("none");
+  }
+
+  async function handleDesignFiles(files: FileList | null) {
+    const selected = Array.from(files ?? []);
+    if (selected.length === 0) return;
+    if (selected.some((file) => file.size > 5 * 1024 * 1024)) {
+      props.setNotice("Each image must be under 5MB. No images were uploaded.");
+      return;
+    }
+
+    setBusy("upload");
+    props.setNotice(`Uploading ${selected.length} gallery image${selected.length === 1 ? "" : "s"} to ImageKit...`);
+    let uploaded = [...galleryUrls];
+    try {
+      for (const [index, file] of selected.entries()) {
+        const auth = await imagekitAuth();
+        const result = await upload({
+          file,
+          fileName: `work-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${file.name.replace(/[^a-zA-Z0-9._-]+/g, "-")}`,
+          folder: "/design-works",
+          ...auth,
+          onProgress: (e) => {
+            const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+            props.setNotice(`Uploading image ${index + 1} of ${selected.length}... ${pct}%`);
+          },
+        });
+        if (!result.url) throw new Error("ImageKit did not return a URL for this upload.");
+        uploaded = [...uploaded, result.url];
+        setGalleryUrls(uploaded);
+        setImageUrl(uploaded[0]);
+      }
+      props.setNotice(`${selected.length} gallery image${selected.length === 1 ? "" : "s"} uploaded. The first image is the cover.`);
+    } catch (err) {
+      props.setNotice(`Gallery upload stopped after ${uploaded.length - galleryUrls.length} image${uploaded.length - galleryUrls.length === 1 ? "" : "s"}: ${uploadError(err)}`);
+    } finally {
+      setBusy("none");
+    }
+  }
+
+  function removeGalleryImage(index: number) {
+    const next = galleryUrls.filter((_, imageIndex) => imageIndex !== index);
+    setGalleryUrls(next);
+    setImageUrl(next[0] ?? "");
   }
 
   async function generate() {
@@ -164,12 +208,20 @@ export default function AdminForm(props: Props) {
       if (!res.ok) throw new Error(data.error || "Capture failed.");
       const captured: string = data.imageUrl || data.thumbnailUrl;
       if (!captured) throw new Error("Capture did not return an image.");
-      setImageUrl(captured);
+      if (tab === "design") {
+        const next = [...galleryUrls, captured];
+        setGalleryUrls(next);
+        setImageUrl(next[0]);
+      } else {
+        setImageUrl(captured);
+      }
       setPreviewLocal("");
       props.setNotice(
         typeof data.warning === "string" && data.warning
           ? data.warning
-          : "Link captured + uploaded to ImageKit - preview below. Now click Generate description.",
+          : tab === "design"
+            ? "Link captured and added to the gallery."
+            : "Link captured + uploaded to ImageKit - preview below. Now click Generate description.",
       );
     } catch (err) {
       props.setNotice(err instanceof Error ? err.message : "Capture failed.");
@@ -242,7 +294,11 @@ export default function AdminForm(props: Props) {
       props.setNotice("Title required.");
       return;
     }
-    if (tab !== "dev" && tab !== "video" && !imageUrl) {
+    if (tab === "design" && galleryUrls.length === 0) {
+      props.setNotice("Upload at least one gallery image first.");
+      return;
+    }
+    if (tab !== "dev" && tab !== "video" && tab !== "design" && !imageUrl) {
       props.setNotice("Upload an image first.");
       return;
     }
@@ -269,6 +325,7 @@ export default function AdminForm(props: Props) {
           tags: tab === "dev" ? techStack : tags.split(",").map((s) => s.trim()).filter(Boolean),
           metric: metric.trim() || (tab === "dev" ? "Live" : "New"),
           imageUrl: tab === "dev" ? null : imageUrl || null,
+          galleryUrls: tab === "design" ? galleryUrls : [],
           url: tab === "dev" ? pageUrl : null,
           techStack: tab === "dev" ? techStack : [],
           thumbnailUrl: thumbUrl || null,
@@ -277,6 +334,7 @@ export default function AdminForm(props: Props) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Publish failed.");
+      if (!data.project) throw new Error("Publish failed — server did not return a project.");
       props.onPublished(data.project);
       setJustPublished(true);
       setTimeout(() => setJustPublished(false), 6000);
@@ -286,6 +344,7 @@ export default function AdminForm(props: Props) {
       setUrl("");
       setTech("");
       setImageUrl("");
+      setGalleryUrls([]);
       setPreviewLocal("");
       setDescription("");
       setTried("");
@@ -425,6 +484,70 @@ export default function AdminForm(props: Props) {
             <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Tech stack</span>
             <input value={tech} onChange={(e) => setTech(e.target.value)} placeholder="Next.js, Tailwind, Vercel" className={inputCls} />
           </label>
+        </div>
+      ) : tab === "design" ? (
+        <div className="space-y-3">
+          <div>
+            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Image — upload or paste a link</span>
+            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-zinc-50 px-4 py-8 text-center text-sm transition hover:bg-zinc-100 dark:bg-black/20">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={busy !== "none"}
+                className="hidden"
+                onChange={(e) => {
+                  void handleDesignFiles(e.currentTarget.files);
+                  e.currentTarget.value = "";
+                }}
+              />
+              <span className="font-bold">{busy === "upload" ? "Uploading gallery images..." : "Click to upload multiple images"}</span>
+              <span className="text-xs opacity-70">Select multiple PNG/JPG images — each up to 5MB</span>
+            </label>
+            <div className="mt-3 flex gap-2">
+              <input
+                value={socialUrl}
+                onChange={(e) => setSocialUrl(e.target.value)}
+                placeholder="https://example.com/post-or-image"
+                inputMode="url"
+                className={inputCls + " h-11"}
+              />
+              <button
+                type="button"
+                onClick={captureSocial}
+                disabled={socialCaptureBusy || busy !== "none"}
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 text-xs font-bold text-white transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60 dark:bg-white dark:text-zinc-900"
+              >
+                {socialCaptureBusy && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />}
+                {socialCaptureBusy ? "Capturing..." : "Capture link"}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+              Upload several images at once, or paste a post/page link and capture it to add that image to the gallery.
+            </p>
+          </div>
+          {galleryUrls.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {galleryUrls.map((src, index) => (
+                <div key={`${src}-${index}`} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`Gallery image ${index + 1}`} className="h-28 w-full rounded-xl border border-zinc-200 object-cover" />
+                  {index === 0 && <span className="absolute bottom-2 left-2 rounded-full bg-zinc-950/75 px-2 py-1 text-[10px] font-bold text-white">Cover</span>}
+                  <button
+                    type="button"
+                    onClick={() => removeGalleryImage(index)}
+                    disabled={busy !== "none"}
+                    aria-label={`Remove gallery image ${index + 1}`}
+                    className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-zinc-950/75 text-sm font-bold text-white transition hover:bg-rose-600 disabled:opacity-50"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11px] leading-5 text-zinc-500">The first image will be used as the project cover. Visitors can click it to browse the full gallery.</p>
+          )}
         </div>
       ) : (
         <div className="space-y-5">

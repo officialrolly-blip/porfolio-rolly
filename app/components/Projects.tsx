@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Image as IKImage } from "@imagekit/next";
 import { isImageKitSrc } from "@/lib/imagekit";
 type TabId = "social" | "design" | "dev";
@@ -34,6 +35,7 @@ function Card({ m, mCls, t, d, tags, top, link }: CardProps) {
 type P = {
   id: string; category: TabId; title: string; description: string;
   tags: string[]; metric: string; imageUrl: string | null;
+  galleryUrls?: string[];
   url?: string | null; thumbnailUrl?: string | null;
 };
 
@@ -170,6 +172,97 @@ function BrowserBar() {
   );
 }
 
+function GalleryLightbox({ title, images, onClose }: {
+  title: string;
+  images: string[];
+  onClose: () => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+      if (images.length > 1 && event.key === "ArrowRight") {
+        setIndex((current) => (current + 1) % images.length);
+      }
+      if (images.length > 1 && event.key === "ArrowLeft") {
+        setIndex((current) => (current - 1 + images.length) % images.length);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [images.length, onClose]);
+
+  const src = images[index];
+  const image = isImageKitSrc(src) ? (
+    <IKImage
+      src={src}
+      alt={`${title} — image ${index + 1}`}
+      width={1600}
+      height={1200}
+      sizes="(max-width: 768px) 100vw, 90vw"
+      className="max-h-[65dvh] max-w-full object-contain"
+    />
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={`${title} — image ${index + 1}`} className="max-h-[65dvh] max-w-full object-contain" />
+  );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] grid place-items-center bg-zinc-950/90 p-3 backdrop-blur-md sm:p-6"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div role="dialog" aria-modal="true" aria-label={`${title} image gallery`} className="relative flex max-h-full w-full max-w-5xl flex-col items-center rounded-3xl border border-white/15 bg-zinc-900 p-4 text-white shadow-2xl sm:p-6">
+        <div className="mb-4 flex w-full items-center justify-between gap-4">
+          <h3 className="truncate text-sm font-bold sm:text-base">{title}</h3>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="text-xs text-zinc-300">{index + 1} / {images.length}</span>
+            <button ref={closeRef} type="button" onClick={onClose} aria-label="Close gallery" className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-xl transition hover:bg-white/20">×</button>
+          </div>
+        </div>
+        <div className="flex min-h-0 w-full flex-1 items-center justify-center gap-3">
+          {images.length > 1 && (
+            <button type="button" onClick={() => setIndex((current) => (current - 1 + images.length) % images.length)} aria-label="Previous image" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-2xl transition hover:bg-white/20">‹</button>
+          )}
+          <div className="flex min-h-0 flex-1 items-center justify-center">{image}</div>
+          {images.length > 1 && (
+            <button type="button" onClick={() => setIndex((current) => (current + 1) % images.length)} aria-label="Next image" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-2xl transition hover:bg-white/20">›</button>
+          )}
+        </div>
+        {images.length > 1 && (
+          <div className="mt-4 flex max-w-full gap-2 overflow-x-auto pb-1">
+            {images.map((imageUrl, imageIndex) => (
+              <button
+                key={`${imageUrl}-${imageIndex}`}
+                type="button"
+                onClick={() => setIndex(imageIndex)}
+                aria-label={`Show image ${imageIndex + 1}`}
+                aria-current={index === imageIndex}
+                className={`h-14 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition ${index === imageIndex ? "border-fuchsia-400" : "border-transparent opacity-60 hover:opacity-100"}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function SocialGrid({ items }: { items: P[] | null }) {
   if (items === null) return <SkeletonGrid />;
   const live = items.filter((p) => p.category === "social");
@@ -193,6 +286,8 @@ function SocialGrid({ items }: { items: P[] | null }) {
 }
 
 function DesignGrid({ items }: { items: P[] | null }) {
+  const [selectedGallery, setSelectedGallery] = useState<{ title: string; images: string[] } | null>(null);
+  const closeGallery = useCallback(() => setSelectedGallery(null), []);
   if (items === null) return <SkeletonGrid />;
   const live = items.filter((p) => p.category === "design");
   return (
@@ -206,10 +301,43 @@ function DesignGrid({ items }: { items: P[] | null }) {
           <p className="rounded-2xl border border-white/20 bg-white/40 p-5 text-sm text-zinc-500 dark:bg-white/5">No works yet — check back soon.</p>
         ) : (
           live.map((c) => (
-            <Card key={c.id} m={c.metric || "New"} mCls="bg-violet-500/15 text-violet-600 dark:text-violet-300" t={c.title} d={c.description} tags={c.tags} top={<div><BrowserBar />{c.imageUrl ? <Img src={c.imageUrl} alt={c.title} /> : <div className="flex h-44 items-center justify-center bg-zinc-950 font-mono text-xs text-zinc-400">Design preview image</div>}</div>} />
+            <Card
+              key={c.id}
+              m={c.metric || "New"}
+              mCls="bg-violet-500/15 text-violet-600 dark:text-violet-300"
+              t={c.title}
+              d={c.description}
+              tags={c.tags}
+              top={
+                <div>
+                  <BrowserBar />
+                  {c.imageUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedGallery({
+                        title: c.title,
+                        images: [...new Set([c.imageUrl, ...(c.galleryUrls ?? [])].filter((src): src is string => Boolean(src)))],
+                      })}
+                      aria-label={`View ${c.title} image gallery`}
+                      className="group relative block w-full cursor-zoom-in"
+                    >
+                      <Img src={c.imageUrl} alt={c.title} />
+                      <span className="absolute inset-0 grid place-items-center bg-black/0 text-sm font-bold text-white opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100 group-focus-visible:bg-black/35 group-focus-visible:opacity-100">
+                        View gallery{c.galleryUrls && c.galleryUrls.length > 1 ? ` · ${c.galleryUrls.length} images` : ""}
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="flex h-44 items-center justify-center bg-zinc-950 font-mono text-xs text-zinc-400">Design preview image</div>
+                  )}
+                </div>
+              }
+            />
           ))
         )}
       </div>
+      {selectedGallery && (
+        <GalleryLightbox title={selectedGallery.title} images={selectedGallery.images} onClose={closeGallery} />
+      )}
     </div>
   );
 }

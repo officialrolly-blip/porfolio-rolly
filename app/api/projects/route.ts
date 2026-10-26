@@ -28,6 +28,9 @@ export async function POST(req: Request) {
     tags: Array.isArray(body.tags) ? body.tags.map(String).slice(0, 8) : [],
     metric: String(body.metric ?? "").slice(0, 60),
     imageUrl: body.imageUrl ? String(body.imageUrl) : null,
+    galleryUrls: Array.isArray(body.galleryUrls)
+      ? body.galleryUrls.map(String).filter(Boolean)
+      : [],
     url: body.url ? String(body.url) : null,
     techStack: Array.isArray(body.techStack) ? body.techStack.map(String).slice(0, 10) : [],
     thumbnailUrl: body.thumbnailUrl ? String(body.thumbnailUrl) : null,
