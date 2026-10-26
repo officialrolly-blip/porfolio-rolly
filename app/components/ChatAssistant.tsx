@@ -14,28 +14,7 @@ const GREETING: Msg = {
   content: "👋 Hi! I'm Rolly AI — ask me anything about Rolly's services, skills, tools, or how to work with him!",
 };
 
-const WELCOME_SPEECH =
-  "Hi there! I'm Rolly AI. I can tell you about Rolly's services, skills, or how to hire him. Click me to start chatting!";
-
 const MUTE_KEY = "rolly-ai-muted";
-
-// Free voice: the browser's built-in SpeechSynthesis (no API key, no quota).
-function speak(text: string) {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-  try { if (localStorage.getItem(MUTE_KEY) === "1") return; } catch {}
-  const synth = window.speechSynthesis;
-  synth.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  const voices = synth.getVoices();
-  const en = voices.filter((v) => v.lang.toLowerCase().startsWith("en"));
-  const voice =
-    en.find((v) => /natural|neural|google|samantha|daniel|zira|aria/i.test(v.name)) ??
-    en[0];
-  if (voice) u.voice = voice;
-  u.rate = 1.02;
-  u.pitch = 1;
-  synth.speak(u);
-}
 
 function WavingBot({ size = "h-7 w-7" }: { size?: string }) {
   return (
@@ -51,18 +30,98 @@ export default function ChatAssistant() {
   const [sending, setSending] = useState(false);
   const [nudge, setNudge] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<"idle" | "loading" | "playing" | "error">("idle");
+  const [voiceError, setVoiceError] = useState("");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const voiceRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     try { setMuted(localStorage.getItem(MUTE_KEY) === "1"); } catch {}
   }, []);
 
+  useEffect(() => () => {
+    voiceRequestRef.current?.abort();
+    audioRef.current?.pause();
+    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+  }, []);
+
+  function stopVoice() {
+    voiceRequestRef.current?.abort();
+    voiceRequestRef.current = null;
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+    audioUrlRef.current = null;
+    setVoiceStatus("idle");
+    setVoiceError("");
+  }
+
+  async function speak(text: string) {
+    if (muted) return;
+    stopVoice();
+    const controller = new AbortController();
+    voiceRequestRef.current = controller;
+    setVoiceStatus("loading");
+    setVoiceError("");
+    try {
+      const res = await fetch("/api/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(typeof data.error === "string" ? data.error : "Voice generation failed.");
+      }
+      const audioUrl = URL.createObjectURL(await res.blob());
+      if (controller.signal.aborted) {
+        URL.revokeObjectURL(audioUrl);
+        return;
+      }
+      audioUrlRef.current = audioUrl;
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      const releaseAudio = () => {
+        if (audioRef.current === audio) audioRef.current = null;
+        if (audioUrlRef.current === audioUrl) {
+          URL.revokeObjectURL(audioUrl);
+          audioUrlRef.current = null;
+        }
+        if (voiceRequestRef.current === controller) voiceRequestRef.current = null;
+      };
+      audio.onended = () => {
+        releaseAudio();
+        setVoiceStatus("idle");
+      };
+      audio.onerror = () => {
+        if (audioRef.current !== audio) return;
+        releaseAudio();
+        setVoiceStatus("error");
+        setVoiceError("Could not play the generated voice.");
+      };
+      await audio.play();
+      if (voiceRequestRef.current === controller) setVoiceStatus("playing");
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      if (voiceRequestRef.current === controller) {
+        audioRef.current?.pause();
+        audioRef.current = null;
+        if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+        audioUrlRef.current = null;
+        voiceRequestRef.current = null;
+      }
+      setVoiceStatus("error");
+      setVoiceError(err instanceof Error ? err.message : "Voice generation failed.");
+    }
+  }
+
   const toggleMute = () => {
     const next = !muted;
     setMuted(next);
     try { localStorage.setItem(MUTE_KEY, next ? "1" : "0"); } catch {}
-    if (next && typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
+    if (next) stopVoice();
   };
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -93,7 +152,7 @@ export default function ChatAssistant() {
     let alreadyGreeted = false;
     try { alreadyGreeted = sessionStorage.getItem("rolly-ai-greeted") === "1"; } catch {}
     if (alreadyGreeted) return;
-    const show = setTimeout(() => { setNudge(true); speak(WELCOME_SPEECH); }, 4000);
+    const show = setTimeout(() => setNudge(true), 4000);
     const hide = setTimeout(() => {
       setNudge(false);
       try { sessionStorage.setItem("rolly-ai-greeted", "1"); } catch {}
@@ -120,7 +179,7 @@ export default function ChatAssistant() {
       const data = await res.json();
       if (!res.ok || !data.reply) throw new Error(data.error ?? "Send failed");
       setMessages([...next, { role: "assistant", content: data.reply }]);
-      speak(data.reply);
+      void speak(data.reply);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Sorry, something went wrong.";
       setMessages([...next, { role: "assistant", content: msg }]);
@@ -186,14 +245,19 @@ export default function ChatAssistant() {
               type="button"
               onClick={toggleMute}
               aria-label={muted ? "Turn voice on" : "Turn voice off"}
-              title={muted ? "Voice off — click to enable" : "Voice on — click to mute"}
+              title={muted ? "Voice off — click to enable" : voiceStatus === "error" ? voiceError : voiceStatus === "loading" ? "Generating voice..." : "Voice on — click to mute"}
               className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15 text-base leading-none transition hover:bg-white/30"
             >
-              {muted ? "🔇" : "🔊"}
+              {muted ? "🔇" : voiceStatus === "loading" ? "…" : voiceStatus === "error" ? "⚠️" : voiceStatus === "playing" ? "🔉" : "🔊"}
             </button>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close chat" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15 text-lg leading-none text-white transition hover:bg-white/30">×</button>
           </div>
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+            {voiceStatus === "error" && (
+              <p role="status" className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
+                Voice unavailable: {voiceError}
+              </p>
+            )}
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 ${m.role === "user" ? "rounded-br-md bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 text-white shadow" : "rounded-bl-md border border-zinc-900/10 bg-white/70 text-zinc-800 dark:border-white/10 dark:bg-white/10 dark:text-zinc-100"}`}>
