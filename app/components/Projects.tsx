@@ -178,6 +178,7 @@ function GalleryLightbox({ title, images, onClose }: {
   onClose: () => void;
 }) {
   const [index, setIndex] = useState(0);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -201,19 +202,6 @@ function GalleryLightbox({ title, images, onClose }: {
   }, [images.length, onClose]);
 
   const src = images[index];
-  const image = isImageKitSrc(src) ? (
-    <IKImage
-      src={src}
-      alt={`${title} — image ${index + 1}`}
-      width={1600}
-      height={1200}
-      sizes="(max-width: 768px) 100vw, 90vw"
-      className="max-h-[65dvh] max-w-full object-contain"
-    />
-  ) : (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={`${title} — image ${index + 1}`} className="max-h-[65dvh] max-w-full object-contain" />
-  );
 
   if (typeof document === "undefined") return null;
   return createPortal(
@@ -235,7 +223,19 @@ function GalleryLightbox({ title, images, onClose }: {
           {images.length > 1 && (
             <button type="button" onClick={() => setIndex((current) => (current - 1 + images.length) % images.length)} aria-label="Previous image" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-2xl transition hover:bg-white/20">‹</button>
           )}
-          <div className="flex min-h-0 flex-1 items-center justify-center">{image}</div>
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            {failedSrc === src ? (
+              <p role="status" className="rounded-xl bg-white/10 px-4 py-3 text-sm text-zinc-300">This image could not be loaded.</p>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={src}
+                alt={`${title} — image ${index + 1}`}
+                onError={() => setFailedSrc(src)}
+                className="max-h-[65dvh] max-w-full object-contain"
+              />
+            )}
+          </div>
           {images.length > 1 && (
             <button type="button" onClick={() => setIndex((current) => (current + 1) % images.length)} aria-label="Next image" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-2xl transition hover:bg-white/20">›</button>
           )}
@@ -319,12 +319,9 @@ function DesignGrid({ items }: { items: P[] | null }) {
                         images: [...new Set([c.imageUrl, ...(c.galleryUrls ?? [])].filter((src): src is string => Boolean(src)))],
                       })}
                       aria-label={`View ${c.title} image gallery`}
-                      className="group relative block w-full cursor-zoom-in"
+                      className="block w-full cursor-zoom-in border-0 bg-transparent p-0 text-left"
                     >
                       <Img src={c.imageUrl} alt={c.title} />
-                      <span className="absolute inset-0 grid place-items-center bg-black/0 text-sm font-bold text-white opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100 group-focus-visible:bg-black/35 group-focus-visible:opacity-100">
-                        View gallery{c.galleryUrls && c.galleryUrls.length > 1 ? ` · ${c.galleryUrls.length} images` : ""}
-                      </span>
                     </button>
                   ) : (
                     <div className="flex h-44 items-center justify-center bg-zinc-950 font-mono text-xs text-zinc-400">Design preview image</div>

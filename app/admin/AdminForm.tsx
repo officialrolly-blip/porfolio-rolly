@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   upload,
   ImageKitAbortError,
@@ -19,6 +19,19 @@ type Props = {
   onPublished: (p: ProjectItem) => void;
 };
 
+type GalleryImage = {
+  id: string;
+  name: string;
+  fileName: string;
+  url: string | null;
+  previewUrl: string;
+  status: "uploading" | "uploaded" | "failed";
+  progress: number;
+  error?: string;
+  file?: File;
+  fingerprint?: string;
+};
+
 export default function AdminForm(props: Props) {
   const tab = props.tab;
   const password = props.password;
@@ -28,7 +41,7 @@ export default function AdminForm(props: Props) {
   const [url, setUrl] = useState("");
   const [tech, setTech] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [previewLocal, setPreviewLocal] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState("none");
@@ -40,8 +53,26 @@ export default function AdminForm(props: Props) {
   const [socialCaptureBusy, setSocialCaptureBusy] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
   const [videoBusy, setVideoBusy] = useState(false);
+  const previewUrls = useRef(new Set<string>());
   const headers = { "Content-Type": "application/json", "x-admin-password": password };
   const label = TABS.find((t) => t.id === tab)?.label ?? tab;
+  const galleryUrls = galleryImages.flatMap((image) => image.status === "uploaded" && image.url ? [image.url] : []);
+
+  useEffect(() => () => {
+    previewUrls.current.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
+    previewUrls.current.clear();
+  }, []);
+
+  function createPreviewUrl(file: File) {
+    const previewUrl = URL.createObjectURL(file);
+    previewUrls.current.add(previewUrl);
+    return previewUrl;
+  }
+
+  function releasePreviewUrl(previewUrl: string) {
+    if (!previewUrls.current.delete(previewUrl)) return;
+    URL.revokeObjectURL(previewUrl);
+  }
 
   // Fetches signed, expiring upload credentials from our server route.
   // The ImageKit private key stays server-side; the browser only gets a token.
@@ -96,47 +127,107 @@ export default function AdminForm(props: Props) {
     setBusy("none");
   }
 
-  async function handleDesignFiles(files: FileList | null) {
-    const selected = Array.from(files ?? []);
-    if (selected.length === 0) return;
-    if (selected.some((file) => file.size > 5 * 1024 * 1024)) {
-      props.setNotice("Each image must be under 5MB. No images were uploaded.");
-      return;
-    }
-
-    setBusy("upload");
-    props.setNotice(`Uploading ${selected.length} gallery image${selected.length === 1 ? "" : "s"} to ImageKit...`);
-    let uploaded = [...galleryUrls];
+  async function uploadDesignImage(image: GalleryImage, position: number, total: number) {
+    if (!image.file) return false;
+    setGalleryImages((current) => current.map((entry) => entry.id === image.id
+      ? { ...entry, status: "uploading", progress: 0, error: undefined }
+      : entry));
     try {
-      for (const [index, file] of selected.entries()) {
-        const auth = await imagekitAuth();
-        const result = await upload({
-          file,
-          fileName: `work-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${file.name.replace(/[^a-zA-Z0-9._-]+/g, "-")}`,
-          folder: "/design-works",
-          ...auth,
-          onProgress: (e) => {
-            const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
-            props.setNotice(`Uploading image ${index + 1} of ${selected.length}... ${pct}%`);
-          },
-        });
-        if (!result.url) throw new Error("ImageKit did not return a URL for this upload.");
-        uploaded = [...uploaded, result.url];
-        setGalleryUrls(uploaded);
-        setImageUrl(uploaded[0]);
-      }
-      props.setNotice(`${selected.length} gallery image${selected.length === 1 ? "" : "s"} uploaded. The first image is the cover.`);
+      const auth = await imagekitAuth();
+      const result = await upload({
+        file: image.file,
+        fileName: image.fileName,
+        folder: "/design-works",
+        ...auth,
+        onProgress: (e) => {
+          const progress = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+          setGalleryImages((current) => current.map((entry) => entry.id === image.id ? { ...entry, progress } : entry));
+          props.setNotice(`Uploading image ${position} of ${total}... ${progress}%`);
+        },
+      });
+      const uploadedUrl = result.url;
+      if (!uploadedUrl) throw new Error("ImageKit did not return a URL for this upload.");
+      releasePreviewUrl(image.previewUrl);
+      setGalleryImages((current) => current.map((entry) => entry.id === image.id
+        ? { ...entry, url: uploadedUrl, previewUrl: uploadedUrl, status: "uploaded", progress: 100, file: undefined }
+        : entry));
+      return true;
     } catch (err) {
-      props.setNotice(`Gallery upload stopped after ${uploaded.length - galleryUrls.length} image${uploaded.length - galleryUrls.length === 1 ? "" : "s"}: ${uploadError(err)}`);
-    } finally {
-      setBusy("none");
+      const message = uploadError(err);
+      setGalleryImages((current) => current.map((entry) => entry.id === image.id
+        ? { ...entry, status: "failed", error: message }
+        : entry));
+      return false;
     }
   }
 
+  async function handleDesignFiles(files: FileList | null) {
+    if (busy !== "none") return;
+    const selected = Array.from(files ?? []);
+    if (selected.length === 0) return;
+
+    const fingerprints = new Set(galleryImages.map((image) => image.fingerprint).filter(Boolean));
+    const valid: File[] = [];
+    const rejected: string[] = [];
+    for (const file of selected) {
+      const fingerprint = `${file.name}:${file.size}:${file.lastModified}`;
+      if (!file.type.startsWith("image/")) {
+        rejected.push(`${file.name}: not an image`);
+      } else if (file.size > 5 * 1024 * 1024) {
+        rejected.push(`${file.name}: larger than 5MB`);
+      } else if (fingerprints.has(fingerprint)) {
+        rejected.push(`${file.name}: already added`);
+      } else {
+        fingerprints.add(fingerprint);
+        valid.push(file);
+      }
+    }
+    if (valid.length === 0) {
+      props.setNotice(rejected.length ? rejected.join(". ") : "No new images selected.");
+      return;
+    }
+
+    const pending = valid.map((file): GalleryImage => ({
+      id: crypto.randomUUID(),
+      name: file.name,
+      fileName: `work-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${file.name.replace(/[^a-zA-Z0-9._-]+/g, "-")}`,
+      url: null,
+      previewUrl: createPreviewUrl(file),
+      status: "uploading",
+      progress: 0,
+      file,
+      fingerprint: `${file.name}:${file.size}:${file.lastModified}`,
+    }));
+    setGalleryImages((current) => [...current, ...pending]);
+    setBusy("upload");
+    props.setNotice(`Uploading ${pending.length} gallery image${pending.length === 1 ? "" : "s"} to ImageKit...`);
+
+    let succeeded = 0;
+    for (const [index, image] of pending.entries()) {
+      if (await uploadDesignImage(image, index + 1, pending.length)) succeeded += 1;
+    }
+    const failed = pending.length - succeeded;
+    setBusy("none");
+    props.setNotice([
+      `${succeeded} of ${pending.length} image${pending.length === 1 ? "" : "s"} uploaded.`,
+      failed ? `${failed} failed — retry or remove them before publishing.` : "",
+      rejected.length ? `Skipped: ${rejected.join("; ")}.` : "",
+    ].filter(Boolean).join(" "));
+  }
+
+  async function retryDesignImage(image: GalleryImage) {
+    setBusy("upload");
+    props.setNotice(`Retrying ${image.name}...`);
+    const succeeded = await uploadDesignImage(image, 1, 1);
+    setBusy("none");
+    props.setNotice(succeeded ? `${image.name} uploaded successfully.` : `Could not upload ${image.name}.`);
+  }
+
   function removeGalleryImage(index: number) {
-    const next = galleryUrls.filter((_, imageIndex) => imageIndex !== index);
-    setGalleryUrls(next);
-    setImageUrl(next[0] ?? "");
+    const image = galleryImages[index];
+    if (!image || image.status === "uploading") return;
+    if (image.previewUrl.startsWith("blob:")) releasePreviewUrl(image.previewUrl);
+    setGalleryImages((current) => current.filter((_, imageIndex) => imageIndex !== index));
   }
 
   async function generate() {
@@ -209,9 +300,17 @@ export default function AdminForm(props: Props) {
       const captured: string = data.imageUrl || data.thumbnailUrl;
       if (!captured) throw new Error("Capture did not return an image.");
       if (tab === "design") {
-        const next = [...galleryUrls, captured];
-        setGalleryUrls(next);
-        setImageUrl(next[0]);
+        if (!galleryImages.some((image) => image.url === captured)) {
+          setGalleryImages((current) => [...current, {
+            id: crypto.randomUUID(),
+            name: pageUrl,
+            fileName: "",
+            url: captured,
+            previewUrl: captured,
+            status: "uploaded",
+            progress: 100,
+          }]);
+        }
       } else {
         setImageUrl(captured);
       }
@@ -220,7 +319,9 @@ export default function AdminForm(props: Props) {
         typeof data.warning === "string" && data.warning
           ? data.warning
           : tab === "design"
-            ? "Link captured and added to the gallery."
+            ? galleryImages.some((image) => image.url === captured)
+              ? "That image is already in the gallery."
+              : "Link captured and added to the gallery."
             : "Link captured + uploaded to ImageKit - preview below. Now click Generate description.",
       );
     } catch (err) {
@@ -298,6 +399,10 @@ export default function AdminForm(props: Props) {
       props.setNotice("Upload at least one gallery image first.");
       return;
     }
+    if (tab === "design" && galleryImages.some((image) => image.status !== "uploaded")) {
+      props.setNotice("Retry or remove failed gallery images before publishing.");
+      return;
+    }
     if (tab !== "dev" && tab !== "video" && tab !== "design" && !imageUrl) {
       props.setNotice("Upload an image first.");
       return;
@@ -315,6 +420,7 @@ export default function AdminForm(props: Props) {
     try {
       const techStack = tech.split(",").map((s) => s.trim()).filter(Boolean);
       const pageUrl = url.trim();
+      const designGalleryUrls = galleryImages.flatMap((image) => image.url ? [image.url] : []);
       const res = await fetch("/api/projects", {
         method: "POST",
         headers,
@@ -324,8 +430,8 @@ export default function AdminForm(props: Props) {
           description: description.trim(),
           tags: tab === "dev" ? techStack : tags.split(",").map((s) => s.trim()).filter(Boolean),
           metric: metric.trim() || (tab === "dev" ? "Live" : "New"),
-          imageUrl: tab === "dev" ? null : imageUrl || null,
-          galleryUrls: tab === "design" ? galleryUrls : [],
+          imageUrl: tab === "design" ? designGalleryUrls[0] ?? null : tab === "dev" ? null : imageUrl || null,
+          galleryUrls: tab === "design" ? designGalleryUrls : [],
           url: tab === "dev" ? pageUrl : null,
           techStack: tab === "dev" ? techStack : [],
           thumbnailUrl: thumbUrl || null,
@@ -344,7 +450,10 @@ export default function AdminForm(props: Props) {
       setUrl("");
       setTech("");
       setImageUrl("");
-      setGalleryUrls([]);
+      galleryImages.forEach((image) => {
+        if (image.previewUrl.startsWith("blob:")) releasePreviewUrl(image.previewUrl);
+      });
+      setGalleryImages([]);
       setPreviewLocal("");
       setDescription("");
       setTried("");
@@ -489,7 +598,14 @@ export default function AdminForm(props: Props) {
         <div className="space-y-3">
           <div>
             <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Image — upload or paste a link</span>
-            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-zinc-50 px-4 py-8 text-center text-sm transition hover:bg-zinc-100 dark:bg-black/20">
+            <label
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                void handleDesignFiles(event.dataTransfer.files);
+              }}
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-zinc-50 px-4 py-8 text-center text-sm transition hover:bg-zinc-100 dark:bg-black/20"
+            >
               <input
                 type="file"
                 accept="image/*"
@@ -502,7 +618,7 @@ export default function AdminForm(props: Props) {
                 }}
               />
               <span className="font-bold">{busy === "upload" ? "Uploading gallery images..." : "Click to upload multiple images"}</span>
-              <span className="text-xs opacity-70">Select multiple PNG/JPG images — each up to 5MB</span>
+              <span className="text-xs opacity-70">Select or drop multiple images — each up to 5MB</span>
             </label>
             <div className="mt-3 flex gap-2">
               <input
@@ -526,27 +642,43 @@ export default function AdminForm(props: Props) {
               Upload several images at once, or paste a post/page link and capture it to add that image to the gallery.
             </p>
           </div>
-          {galleryUrls.length > 0 ? (
+          {galleryImages.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {galleryUrls.map((src, index) => (
-                <div key={`${src}-${index}`} className="relative">
+              {galleryImages.map((image, index) => (
+                <div key={image.id} className="relative overflow-hidden rounded-xl border border-zinc-200">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={`Gallery image ${index + 1}`} className="h-28 w-full rounded-xl border border-zinc-200 object-cover" />
+                  <img src={image.previewUrl} alt={`${image.name} preview`} className="h-28 w-full object-cover" />
                   {index === 0 && <span className="absolute bottom-2 left-2 rounded-full bg-zinc-950/75 px-2 py-1 text-[10px] font-bold text-white">Cover</span>}
+                  {image.status !== "uploaded" && (
+                    <span className={`absolute bottom-2 right-2 rounded-full px-2 py-1 text-[10px] font-bold text-white ${image.status === "failed" ? "bg-rose-600" : "bg-zinc-950/75"}`}>
+                      {image.status === "failed" ? "Upload failed" : `Uploading ${image.progress}%`}
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => removeGalleryImage(index)}
-                    disabled={busy !== "none"}
+                    disabled={image.status === "uploading"}
                     aria-label={`Remove gallery image ${index + 1}`}
                     className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-zinc-950/75 text-sm font-bold text-white transition hover:bg-rose-600 disabled:opacity-50"
                   >
                     ×
                   </button>
+                  {image.status === "failed" && image.file && (
+                    <button
+                      type="button"
+                      onClick={() => void retryDesignImage(image)}
+                      disabled={busy !== "none"}
+                      className="absolute inset-x-2 top-10 rounded-lg bg-zinc-950/80 px-2 py-1.5 text-xs font-bold text-white transition hover:bg-fuchsia-700 disabled:opacity-50"
+                    >
+                      Retry upload
+                    </button>
+                  )}
+                  {image.error && <p className="bg-rose-500/10 px-2 py-1 text-[10px] leading-4 text-rose-600 dark:text-rose-300">{image.error}</p>}
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[11px] leading-5 text-zinc-500">The first image will be used as the project cover. Visitors can click it to browse the full gallery.</p>
+            <p className="text-[11px] leading-5 text-zinc-500">No images added yet. The first image will be the project cover; visitors can click it to browse the full gallery.</p>
           )}
         </div>
       ) : (
