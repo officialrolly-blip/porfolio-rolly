@@ -206,42 +206,47 @@ function GalleryLightbox({ title, images, onClose }: {
   if (typeof document === "undefined") return null;
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] grid place-items-center bg-zinc-950/90 p-3 backdrop-blur-md sm:p-6"
+      className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-gradient-to-br from-violet-100/75 via-white/70 to-cyan-100/75 p-3 backdrop-blur-2xl sm:p-6"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div role="dialog" aria-modal="true" aria-label={`${title} image gallery`} className="relative flex max-h-full w-full max-w-5xl flex-col items-center rounded-3xl border border-white/15 bg-zinc-900 p-4 text-white shadow-2xl sm:p-6">
-        <div className="mb-4 flex w-full items-center justify-between gap-4">
-          <h3 className="truncate text-sm font-bold sm:text-base">{title}</h3>
+      <div role="dialog" aria-modal="true" aria-label={`${title} image gallery`} className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col items-center overflow-hidden rounded-[2rem] border border-white/80 bg-white/65 p-4 text-zinc-800 shadow-[0_24px_100px_-24px_rgba(124,58,237,0.38)] backdrop-blur-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6">
+        <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-fuchsia-300/35 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-16 h-64 w-64 rounded-full bg-cyan-300/35 blur-3xl" />
+        <div className="relative z-10 mb-4 flex w-full items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-600">Graphic design gallery</p>
+            <h3 className="mt-1 truncate text-base font-extrabold tracking-tight text-zinc-900 sm:text-lg">{title}</h3>
+          </div>
           <div className="flex shrink-0 items-center gap-3">
-            <span className="text-xs text-zinc-300">{index + 1} / {images.length}</span>
-            <button ref={closeRef} type="button" onClick={onClose} aria-label="Close gallery" className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-xl transition hover:bg-white/20">×</button>
+            <span className="rounded-full border border-violet-200/80 bg-white/70 px-3 py-1.5 text-xs font-bold tabular-nums text-violet-700 shadow-sm">{index + 1} <span className="text-violet-400">/</span> {images.length}</span>
+            <button ref={closeRef} type="button" onClick={onClose} aria-label="Close gallery" className="grid h-10 w-10 place-items-center rounded-full border border-white/90 bg-white/75 text-xl text-violet-700 shadow-sm transition hover:rotate-90 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-500">×</button>
           </div>
         </div>
-        <div className="flex min-h-0 w-full flex-1 items-center justify-center gap-3">
+        <div className="relative z-10 flex min-h-0 w-full flex-1 items-center justify-center gap-2 sm:gap-4">
           {images.length > 1 && (
-            <button type="button" onClick={() => setIndex((current) => (current - 1 + images.length) % images.length)} aria-label="Previous image" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-2xl transition hover:bg-white/20">‹</button>
+            <button type="button" onClick={() => setIndex((current) => (current - 1 + images.length) % images.length)} aria-label="Previous image" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/90 bg-white/75 text-2xl text-violet-700 shadow-md backdrop-blur-xl transition hover:scale-105 hover:border-violet-200 hover:bg-violet-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-500 sm:h-12 sm:w-12">‹</button>
           )}
-          <div className="flex min-h-0 flex-1 items-center justify-center">
+          <div className="flex min-h-[42vh] min-w-0 flex-1 items-center justify-center overflow-hidden rounded-2xl border border-white/90 bg-gradient-to-br from-white/80 via-violet-50/75 to-cyan-50/80 p-2 shadow-inner sm:min-h-[55vh] sm:rounded-[1.5rem] sm:p-4">
             {failedSrc === src ? (
-              <p role="status" className="rounded-xl bg-white/10 px-4 py-3 text-sm text-zinc-300">This image could not be loaded.</p>
+              <p role="status" className="rounded-2xl border border-violet-100 bg-white/75 px-5 py-4 text-sm font-medium text-zinc-600 shadow-sm">This image could not be loaded.</p>
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={src}
                 alt={`${title} — image ${index + 1}`}
                 onError={() => setFailedSrc(src)}
-                className="max-h-[65dvh] max-w-full object-contain"
+                className="max-h-[52dvh] max-w-full rounded-xl object-contain shadow-[0_16px_45px_-20px_rgba(63,38,105,0.35)] sm:max-h-[62dvh]"
               />
             )}
           </div>
           {images.length > 1 && (
-            <button type="button" onClick={() => setIndex((current) => (current + 1) % images.length)} aria-label="Next image" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-2xl transition hover:bg-white/20">›</button>
+            <button type="button" onClick={() => setIndex((current) => (current + 1) % images.length)} aria-label="Next image" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/90 bg-white/75 text-2xl text-violet-700 shadow-md backdrop-blur-xl transition hover:scale-105 hover:border-violet-200 hover:bg-violet-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-500 sm:h-12 sm:w-12">›</button>
           )}
         </div>
         {images.length > 1 && (
-          <div className="mt-4 flex max-w-full gap-2 overflow-x-auto pb-1">
+          <div className="relative z-10 mt-4 flex max-w-full gap-2 overflow-x-auto rounded-2xl border border-white/80 bg-white/45 p-2 shadow-sm backdrop-blur-xl">
             {images.map((imageUrl, imageIndex) => (
               <button
                 key={`${imageUrl}-${imageIndex}`}
@@ -249,10 +254,10 @@ function GalleryLightbox({ title, images, onClose }: {
                 onClick={() => setIndex(imageIndex)}
                 aria-label={`Show image ${imageIndex + 1}`}
                 aria-current={index === imageIndex}
-                className={`h-14 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition ${index === imageIndex ? "border-fuchsia-400" : "border-transparent opacity-60 hover:opacity-100"}`}
+                className={`h-14 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-500 ${index === imageIndex ? "scale-[1.03] border-fuchsia-500 shadow-md shadow-fuchsia-500/20" : "border-transparent opacity-65 hover:border-violet-300 hover:opacity-100"}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+                <img src={imageUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 hover:scale-110" />
               </button>
             ))}
           </div>
