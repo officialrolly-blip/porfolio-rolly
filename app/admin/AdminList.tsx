@@ -27,43 +27,58 @@ export default function AdminList({ tab, visible, loading, load, remove }: {
         </p>
       )}
       <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-        {visible.map((p) => (
-          <li
-            key={p.id}
-            className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 transition hover:-translate-y-0.5 hover:shadow-lg dark:border-white/10 dark:bg-black/30"
-          >
-            {(p.imageUrl || p.thumbnailUrl) && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={p.imageUrl ?? p.thumbnailUrl ?? ""}
-                alt=""
-                loading="lazy"
-                className="h-32 w-full object-cover object-top"
-              />
-            )}
-            {p.videoUrl && (
-              <div onContextMenu={(e) => e.preventDefault()}>
-                <SecureVideo src={p.videoUrl} title={p.title} className="[&_video]:aspect-video" />
+        {visible.map((p) => {
+          const images = p.category === "design"
+            ? [...new Set([p.imageUrl, ...(p.galleryUrls ?? [])].filter((src): src is string => Boolean(src)))]
+            : [p.imageUrl ?? p.thumbnailUrl].filter((src): src is string => Boolean(src));
+          return (
+            <li
+              key={p.id}
+              className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 transition hover:-translate-y-0.5 hover:shadow-lg dark:border-white/10 dark:bg-black/30"
+            >
+              {images.length > 0 && (
+                <div className={p.category === "design" && images.length > 1 ? "grid grid-cols-2 gap-1 bg-zinc-200 dark:bg-white/10" : ""}>
+                  {images.map((src, index) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={`${src}-${index}`}
+                      src={src}
+                      alt={p.category === "design" ? `${p.title} gallery image ${index + 1}` : ""}
+                      loading="lazy"
+                      className={p.category === "design" && images.length > 1 ? "h-32 w-full object-cover object-top" : "h-32 w-full object-cover object-top"}
+                    />
+                  ))}
+                  {p.category === "design" && images.length > 1 && (
+                    <span className="col-span-2 bg-zinc-100 px-3 py-1.5 text-center text-[11px] font-bold text-zinc-500 dark:bg-black/30 dark:text-zinc-300">
+                      {images.length} gallery images
+                    </span>
+                  )}
+                </div>
+              )}
+              {p.videoUrl && (
+                <div onContextMenu={(e) => e.preventDefault()}>
+                  <SecureVideo src={p.videoUrl} title={p.title} className="[&_video]:aspect-video" />
+                </div>
+              )}
+              <div className="flex flex-1 flex-col p-4">
+                <p className="truncate text-sm font-extrabold">{p.title}</p>
+                <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-xs leading-5 text-zinc-500 dark:text-zinc-400">
+                  {p.description || "No description yet."}
+                </p>
+                <p className="mt-2 truncate font-mono text-[11px] text-zinc-400">
+                  {(p.tags ?? []).join(" · ")}{p.url ? " · " + p.url : ""}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => remove(p.id)}
+                  className="mt-3 h-9 rounded-full border border-rose-500/40 text-xs font-bold text-rose-500 transition hover:bg-rose-500 hover:text-white"
+                >
+                  Delete
+                </button>
               </div>
-            )}
-            <div className="flex flex-1 flex-col p-4">
-              <p className="truncate text-sm font-extrabold">{p.title}</p>
-              <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-xs leading-5 text-zinc-500 dark:text-zinc-400">
-                {p.description || "No description yet."}
-              </p>
-              <p className="mt-2 truncate font-mono text-[11px] text-zinc-400">
-                {(p.tags ?? []).join(" · ")}{p.url ? " · " + p.url : ""}
-              </p>
-              <button
-                type="button"
-                onClick={() => remove(p.id)}
-                className="mt-3 h-9 rounded-full border border-rose-500/40 text-xs font-bold text-rose-500 transition hover:bg-rose-500 hover:text-white"
-              >
-                Delete
-              </button>
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
