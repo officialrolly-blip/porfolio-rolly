@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+(async () => {
+  const log = (m) => { console.log(m); document.body.innerHTML += '<p>'+m+'</p>'; };
+  try {
+    // login
+    const lr = await fetch('/api/admin-login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password:'admin123'}) });
+    const ld = await lr.json();
+    log('login: ' + lr.status + ' ' + JSON.stringify(ld));
+    sessionStorage.setItem('admin-key','admin123');
+    const pw = sessionStorage.getItem('admin-key');
+    // capture
+    const cr = await fetch('/api/capture', { method:'POST', headers:{'Content-Type':'application/json','x-admin-password':pw}, body: JSON.stringify({url:'https://example.com', folder:'/social-works'}) });
+    const cd = await cr.json();
+    log('capture: ' + cr.status + ' ' + JSON.stringify(cd));
+    const imageUrl = cd.imageUrl;
+    // publish
+    const pr = await fetch('/api/projects', { method:'POST', headers:{'Content-Type':'application/json','x-admin-password':pw}, body: JSON.stringify({category:'social',title:'Test Social Work',description:'desc',tags:['a'],metric:'New',imageUrl, url:null, techStack:[], thumbnailUrl:null, videoUrl:null}) });
+    const text = await pr.text();
+    log('publish: ' + pr.status + ' ' + text);
+  } catch (e) { log('ERROR: ' + e); }
+})();
+</script>
+</body>
+</html>
