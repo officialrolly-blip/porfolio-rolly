@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-const MAX_TEXT_LENGTH = 1200;
+const MAX_TEXT_LENGTH = 5000;
 const DEFAULT_FREE_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
 export async function POST(req: Request) {

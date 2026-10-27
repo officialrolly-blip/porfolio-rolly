@@ -23,6 +23,147 @@ function WavingBot({ size = "h-7 w-7" }: { size?: string }) {
     </span>
   );
 }
+
+type ReplyBlock =
+  | { kind: "paragraph" | "heading"; key: string; text: string }
+  | { kind: "list"; key: string; ordered: boolean; items: string[] }
+  | { kind: "code"; key: string; language: string; text: string };
+
+function parseReply(text: string): ReplyBlock[] {
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  const blocks: ReplyBlock[] = [];
+  let paragraph: string[] = [];
+  let listItems: string[] = [];
+  let orderedList = false;
+  let codeLines: string[] | null = null;
+  let codeLanguage = "";
+
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      blocks.push({ kind: "paragraph", key: `p-${blocks.length}`, text: paragraph.join(" ").trim() });
+      paragraph = [];
+    }
+  };
+  const flushList = () => {
+    if (listItems.length) {
+      blocks.push({ kind: "list", key: `l-${blocks.length}`, ordered: orderedList, items: listItems });
+      listItems = [];
+    }
+  };
+  const flushProse = () => {
+    flushParagraph();
+    flushList();
+  };
+
+  for (const line of lines) {
+    const fence = line.match(/^\s*```(.*)$/);
+    if (fence) {
+      if (codeLines) {
+        blocks.push({ kind: "code", key: `c-${blocks.length}`, language: codeLanguage, text: codeLines.join("\n") });
+        codeLines = null;
+        codeLanguage = "";
+      } else {
+        flushProse();
+        codeLines = [];
+        codeLanguage = fence[1].trim();
+      }
+      continue;
+    }
+    if (codeLines) {
+      codeLines.push(line);
+      continue;
+    }
+    if (!line.trim()) {
+      flushProse();
+      continue;
+    }
+
+    const heading = line.match(/^#{1,3}\s+(.+)$/);
+    if (heading) {
+      flushProse();
+      blocks.push({ kind: "heading", key: `h-${blocks.length}`, text: heading[1] });
+      continue;
+    }
+
+    const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+    const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+    if (unordered || ordered) {
+      flushParagraph();
+      const isOrdered = Boolean(ordered);
+      if (listItems.length && orderedList !== isOrdered) flushList();
+      orderedList = isOrdered;
+      listItems.push((unordered ?? ordered)![1]);
+      continue;
+    }
+
+    flushList();
+    paragraph.push(line.trim());
+  }
+
+  flushProse();
+  if (codeLines) {
+    blocks.push({ kind: "code", key: `c-${blocks.length}`, language: codeLanguage, text: codeLines.join("\n") });
+  }
+  return blocks;
+}
+
+function ReplyInline({ text }: { text: string }) {
+  const tokens = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^)\s]+\)|https?:\/\/[^\s<]+)/g);
+  return (
+    <>
+      {tokens.map((token, index) => {
+        if (!token) return null;
+        if (token.startsWith("**") && token.endsWith("**")) {
+          return <strong key={index} className="font-bold text-zinc-900 dark:text-white">{token.slice(2, -2)}</strong>;
+        }
+        if (token.startsWith("`") && token.endsWith("`")) {
+          return <code key={index} className="rounded-md border border-violet-200/70 bg-violet-100/70 px-1.5 py-0.5 font-mono text-[0.9em] text-violet-800 dark:border-violet-300/20 dark:bg-violet-400/10 dark:text-violet-200">{token.slice(1, -1)}</code>;
+        }
+        const markdownLink = token.match(/^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/);
+        const rawUrl = markdownLink ? null : token.match(/^https?:\/\/[^\s<]+$/)?.[0];
+        const href = markdownLink?.[2] ?? rawUrl;
+        if (href) {
+          const label = markdownLink?.[1] ?? rawUrl;
+          return <a key={index} href={href} target="_blank" rel="noopener noreferrer" className="font-semibold text-violet-700 underline decoration-violet-300 underline-offset-2 hover:text-fuchsia-700 dark:text-violet-300 dark:hover:text-fuchsia-300">{label}</a>;
+        }
+        return token;
+      })}
+    </>
+  );
+}
+
+function AssistantReply({ text }: { text: string }) {
+  const blocks = parseReply(text);
+  return (
+    <div className="w-full min-w-0 space-y-3 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
+      {blocks.map((block) => {
+        if (block.kind === "code") {
+          return (
+            <div key={block.key} className="overflow-hidden rounded-xl border border-violet-200/80 bg-white/75 shadow-sm dark:border-white/10 dark:bg-black/20">
+              <div className="border-b border-violet-100 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-cyan-500/10 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:border-white/10 dark:text-violet-200">
+                {block.language || "Code"}
+              </div>
+              <pre className="max-w-full overflow-x-auto p-3 font-mono text-xs leading-5 text-zinc-800 dark:text-zinc-200"><code>{block.text}</code></pre>
+            </div>
+          );
+        }
+        if (block.kind === "list") {
+          const List = block.ordered ? "ol" : "ul";
+          return (
+            <List key={block.key} className={`space-y-1.5 pl-5 marker:text-fuchsia-500 ${block.ordered ? "list-decimal" : "list-disc"}`}>
+              {block.items.map((item, index) => <li key={`${block.key}-${index}`} className="pl-0.5"><ReplyInline text={item} /></li>)}
+            </List>
+          );
+        }
+        if (block.kind === "heading") {
+          return <h4 key={block.key} className="pt-1 text-sm font-extrabold tracking-tight text-zinc-900 dark:text-white"><ReplyInline text={block.text} /></h4>;
+        }
+        return <p key={block.key} className="whitespace-pre-wrap"><ReplyInline text={block.text} /></p>;
+      })}
+    </div>
+  );
+}
+
 export default function ChatAssistant() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
@@ -252,18 +393,24 @@ export default function ChatAssistant() {
             </button>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close chat" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15 text-lg leading-none text-white transition hover:bg-white/30">×</button>
           </div>
-          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
             {voiceStatus === "error" && (
               <p role="status" className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
                 Voice unavailable: {voiceError}
               </p>
             )}
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 ${m.role === "user" ? "rounded-br-md bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 text-white shadow" : "rounded-bl-md border border-zinc-900/10 bg-white/70 text-zinc-800 dark:border-white/10 dark:bg-white/10 dark:text-zinc-100"}`}>
-                  {m.content}
+              m.role === "user" ? (
+                <div key={i} className="flex justify-end">
+                  <div className="max-w-[85%] rounded-2xl rounded-br-md bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 px-3.5 py-2.5 text-sm leading-6 text-white shadow">
+                    {m.content}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div key={i} className="flex justify-start">
+                  <div className="min-w-0 max-w-full"><AssistantReply text={m.content} /></div>
+                </div>
+              )
             ))}
             {sending && (
               <div className="flex justify-start">

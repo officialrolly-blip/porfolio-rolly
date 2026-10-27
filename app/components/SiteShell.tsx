@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Header from "./Header";
 import ChatAssistant from "./ChatAssistant";
+import WelcomeVoice from "./WelcomeVoice";
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,6 +16,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
     <>
       <Header />
       {children}
+      {pathname === "/" && <WelcomeVoice />}
       <ChatAssistant />
     </>
   );
