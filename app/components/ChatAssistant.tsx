@@ -114,17 +114,17 @@ function ReplyInline({ text }: { text: string }) {
       {tokens.map((token, index) => {
         if (!token) return null;
         if (token.startsWith("**") && token.endsWith("**")) {
-          return <strong key={index} className="font-bold text-zinc-900 dark:text-white">{token.slice(2, -2)}</strong>;
+          return <strong key={index} className="font-bold text-zinc-900">{token.slice(2, -2)}</strong>;
         }
         if (token.startsWith("`") && token.endsWith("`")) {
-          return <code key={index} className="rounded-md border border-violet-200/70 bg-violet-100/70 px-1.5 py-0.5 font-mono text-[0.9em] text-violet-800 dark:border-violet-300/20 dark:bg-violet-400/10 dark:text-violet-200">{token.slice(1, -1)}</code>;
+          return <code key={index} className="rounded-md border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-mono text-[0.9em] text-violet-800">{token.slice(1, -1)}</code>;
         }
         const markdownLink = token.match(/^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/);
         const rawUrl = markdownLink ? null : token.match(/^https?:\/\/[^\s<]+$/)?.[0];
         const href = markdownLink?.[2] ?? rawUrl;
         if (href) {
           const label = markdownLink?.[1] ?? rawUrl;
-          return <a key={index} href={href} target="_blank" rel="noopener noreferrer" className="font-semibold text-violet-700 underline decoration-violet-300 underline-offset-2 hover:text-fuchsia-700 dark:text-violet-300 dark:hover:text-fuchsia-300">{label}</a>;
+          return <a key={index} href={href} target="_blank" rel="noopener noreferrer" className="font-semibold text-violet-700 underline decoration-violet-300 underline-offset-2 hover:text-violet-900">{label}</a>;
         }
         return token;
       })}
@@ -135,28 +135,28 @@ function ReplyInline({ text }: { text: string }) {
 function AssistantReply({ text }: { text: string }) {
   const blocks = parseReply(text);
   return (
-    <div className="w-full min-w-0 space-y-3 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
+    <div className="w-full min-w-0 space-y-3 text-sm leading-6 text-zinc-700">
       {blocks.map((block) => {
         if (block.kind === "code") {
           return (
-            <div key={block.key} className="overflow-hidden rounded-xl border border-violet-200/80 bg-white/75 shadow-sm dark:border-white/10 dark:bg-black/20">
-              <div className="border-b border-violet-100 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-cyan-500/10 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:border-white/10 dark:text-violet-200">
+            <div key={block.key} className="overflow-hidden rounded-xl border border-violet-200/70 bg-white/60 shadow-sm backdrop-blur-md">
+              <div className="border-b border-violet-100 bg-violet-100/60 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-violet-700">
                 {block.language || "Code"}
               </div>
-              <pre className="max-w-full overflow-x-auto p-3 font-mono text-xs leading-5 text-zinc-800 dark:text-zinc-200"><code>{block.text}</code></pre>
+              <pre className="max-w-full overflow-x-auto p-3 font-mono text-xs leading-5 text-zinc-800"><code>{block.text}</code></pre>
             </div>
           );
         }
         if (block.kind === "list") {
           const List = block.ordered ? "ol" : "ul";
           return (
-            <List key={block.key} className={`space-y-1.5 pl-5 marker:text-fuchsia-500 ${block.ordered ? "list-decimal" : "list-disc"}`}>
+            <List key={block.key} className={`space-y-1.5 pl-5 marker:text-violet-400 ${block.ordered ? "list-decimal" : "list-disc"}`}>
               {block.items.map((item, index) => <li key={`${block.key}-${index}`} className="pl-0.5"><ReplyInline text={item} /></li>)}
             </List>
           );
         }
         if (block.kind === "heading") {
-          return <h4 key={block.key} className="pt-1 text-sm font-extrabold tracking-tight text-zinc-900 dark:text-white"><ReplyInline text={block.text} /></h4>;
+          return <h4 key={block.key} className="pt-1 text-sm font-extrabold tracking-tight text-zinc-900"><ReplyInline text={block.text} /></h4>;
         }
         return <p key={block.key} className="whitespace-pre-wrap"><ReplyInline text={block.text} /></p>;
       })}
@@ -338,15 +338,15 @@ export default function ChatAssistant() {
               type="button"
               onClick={openChat}
               aria-label="Rolly AI welcome message — click to open chat"
-              className="animate-chat-pop fixed bottom-24 right-5 z-[59] w-[min(300px,calc(100vw-2.5rem))] rounded-2xl rounded-br-md border border-white/25 bg-white/90 p-4 text-left shadow-2xl backdrop-blur-xl sm:right-6 dark:border-white/15 dark:bg-zinc-900/95"
+              className="animate-chat-pop fixed bottom-24 right-5 z-[59] w-[min(300px,calc(100vw-2.5rem))] rounded-2xl rounded-br-md border border-white/70 bg-white/65 p-4 text-left shadow-2xl shadow-violet-950/10 backdrop-blur-2xl sm:right-6"
             >
-              <span className="block text-sm leading-6 font-semibold text-zinc-800 dark:text-zinc-100">
+              <span className="block text-sm leading-6 font-semibold text-zinc-800">
                 👋 Hi there! I&apos;m Rolly AI — I can tell you about Rolly&apos;s services, skills, or how to hire him.
               </span>
-              <span className="mt-1.5 block text-xs font-medium text-fuchsia-600 dark:text-fuchsia-400">
+              <span className="mt-1.5 block text-xs font-semibold text-violet-700">
                 Click me to start chatting →
               </span>
-              <span aria-hidden className="absolute -bottom-1.5 right-7 h-4 w-4 rotate-45 border-r border-b border-white/25 bg-white/90 dark:border-white/15 dark:bg-zinc-900/95" />
+              <span aria-hidden className="absolute -bottom-1.5 right-7 h-4 w-4 rotate-45 border-r border-b border-white/70 bg-white/65" />
             </button>
           )}
           <button
@@ -355,12 +355,13 @@ export default function ChatAssistant() {
           aria-label="Open chat with Rolly AI"
           className="group fixed bottom-5 right-5 z-[60] sm:bottom-6 sm:right-6"
         >
-          <span className="relative grid h-16 w-16 place-items-center transition-transform duration-300 group-hover:scale-110">
+          <span className="relative grid h-16 w-16 place-items-center rounded-2xl border border-white/80 bg-violet-100/75 text-violet-900 shadow-xl shadow-violet-300/30 ring-1 ring-white/60 backdrop-blur-xl transition duration-300 group-hover:scale-105 group-hover:bg-violet-100">
             <span className="grid h-full w-full place-items-center text-4xl drop-shadow-lg">
               <WavingBot size="h-10 w-10" />
             </span>
+            <span aria-hidden className="absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-violet-300" />
           </span>
-          <span className="pointer-events-none absolute right-full top-1/2 mr-3 hidden -translate-y-1/2 rounded-full border border-white/25 bg-white/80 px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-zinc-800 opacity-0 shadow-lg backdrop-blur-xl transition group-hover:opacity-100 sm:block dark:border-white/15 dark:bg-zinc-900/90 dark:text-zinc-100">
+          <span className="pointer-events-none absolute right-full top-1/2 mr-3 hidden -translate-y-1/2 rounded-full border border-white/70 bg-white/65 px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-zinc-800 opacity-0 shadow-lg backdrop-blur-2xl transition group-hover:opacity-100 sm:block">
             Chat with Rolly AI
           </span>
           </button>
@@ -368,41 +369,42 @@ export default function ChatAssistant() {
       )}
 
       {open && (
-        <div className="animate-chat-pop fixed bottom-5 right-5 z-[60] flex h-[min(560px,calc(100dvh-7rem))] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-3xl border border-white/25 bg-white/80 shadow-2xl backdrop-blur-2xl sm:bottom-6 sm:right-6 dark:border-white/15 dark:bg-zinc-950/90" role="dialog" aria-label="Chat with Rolly AI">
-          <div className="flex items-center gap-3 border-b border-zinc-900/10 bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 px-4 py-3.5 dark:border-white/10">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/20 text-xl ring-1 ring-white/40">
+        <div className="animate-chat-pop fixed bottom-5 right-5 z-[60] flex h-[min(560px,calc(100dvh-7rem))] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-3xl border border-white/70 bg-white/65 text-zinc-800 shadow-2xl shadow-violet-950/15 ring-1 ring-white/30 backdrop-blur-2xl sm:bottom-6 sm:right-6" role="dialog" aria-label="Chat with Rolly AI">
+          <div className="flex items-center gap-3 border-b border-violet-200/70 bg-violet-100/55 px-4 py-3.5 text-violet-950 backdrop-blur-xl">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/80 bg-white/55 text-xl shadow-inner ring-1 ring-violet-200/60">
               <WavingBot size="h-6 w-6" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1.5 text-sm font-bold text-white">
+              <span className="flex items-center gap-1.5 text-sm font-bold tracking-wide text-violet-950">
                 Rolly AI
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
-                  <span className="h-2 w-2 rounded-full bg-emerald-300" />
+                  <span className="absolute h-full w-full animate-ping rounded-full bg-violet-300 opacity-75" />
+                  <span className="h-2 w-2 rounded-full bg-violet-300" />
                 </span>
               </span>
+              <span className="mt-0.5 block text-[11px] font-medium text-violet-700">AI assistant</span>
             </span>
             <button
               type="button"
               onClick={toggleMute}
               aria-label={muted ? "Turn voice on" : "Turn voice off"}
               title={muted ? "Voice off — click to enable" : voiceStatus === "error" ? voiceError : voiceStatus === "loading" ? "Generating voice..." : "Voice on — click to mute"}
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15 text-base leading-none transition hover:bg-white/30"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/55 text-base leading-none transition hover:bg-white/80"
             >
               {muted ? "🔇" : voiceStatus === "loading" ? "…" : voiceStatus === "error" ? "⚠️" : voiceStatus === "playing" ? "🔉" : "🔊"}
             </button>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close chat" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15 text-lg leading-none text-white transition hover:bg-white/30">×</button>
+            <button type="button" onClick={() => setOpen(false)} aria-label="Close chat" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/55 text-lg leading-none text-violet-950 transition hover:bg-white/80">×</button>
           </div>
           <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
             {voiceStatus === "error" && (
-              <p role="status" className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
+              <p role="status" className="rounded-xl border border-amber-400/40 bg-amber-50/80 px-3 py-2 text-xs leading-5 text-amber-800">
                 Voice unavailable: {voiceError}
               </p>
             )}
             {messages.map((m, i) => (
               m.role === "user" ? (
                 <div key={i} className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl rounded-br-md bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 px-3.5 py-2.5 text-sm leading-6 text-white shadow">
+                  <div className="max-w-[85%] rounded-2xl rounded-br-md border border-violet-200/80 bg-violet-100/80 px-3.5 py-2.5 text-sm leading-6 text-violet-950 shadow-lg shadow-violet-300/15 backdrop-blur-md">
                     {m.content}
                   </div>
                 </div>
@@ -414,9 +416,9 @@ export default function ChatAssistant() {
             ))}
             {sending && (
               <div className="flex justify-start">
-                <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-zinc-900/10 bg-white/70 px-4 py-3 dark:border-white/10 dark:bg-white/10" aria-label="Rolly AI is typing">
+                <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-white/70 bg-white/60 px-4 py-3 shadow-sm backdrop-blur-md" aria-label="Rolly AI is typing">
                   {[0, 1, 2].map((d) => (
-                    <span key={d} className="animate-typing-dot h-2 w-2 rounded-full bg-fuchsia-500" style={{ animationDelay: `${d * 0.2}s` }} />
+                    <span key={d} className="animate-typing-dot h-2 w-2 rounded-full bg-violet-300" style={{ animationDelay: `${d * 0.2}s` }} />
                   ))}
                 </div>
               </div>
@@ -425,21 +427,21 @@ export default function ChatAssistant() {
           {messages.length <= 2 && !sending && (
             <div className="flex flex-wrap gap-2 px-4 pb-2">
               {SUGGESTIONS.map((s) => (
-                <button key={s} type="button" onClick={() => send(s)} className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-semibold text-fuchsia-700 transition hover:bg-fuchsia-500/20 dark:text-fuchsia-300">
+                <button key={s} type="button" onClick={() => send(s)} className="rounded-full border border-violet-200 bg-violet-50/75 px-3 py-1.5 text-xs font-semibold text-violet-800 shadow-sm backdrop-blur-md transition hover:border-violet-300 hover:bg-violet-100">
                   {s}
                 </button>
               ))}
             </div>
           )}
-          <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex items-center gap-2 border-t border-zinc-900/10 p-3 dark:border-white/10">
+          <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex items-center gap-2 border-t border-white/70 bg-white/40 p-3 backdrop-blur-xl">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about Rolly..."
               aria-label="Type your message"
-              className="h-11 flex-1 rounded-full border border-zinc-900/10 bg-white/70 px-4 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
+              className="h-11 flex-1 rounded-full border border-white/80 bg-white/70 px-4 text-sm text-zinc-900 shadow-inner shadow-violet-950/5 outline-none transition placeholder:text-zinc-400 focus:border-violet-300 focus:ring-2 focus:ring-violet-200/60"
             />
-            <button type="submit" disabled={sending || !input.trim()} aria-label="Send message" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 text-white shadow-lg transition hover:scale-105 disabled:opacity-50 disabled:hover:scale-100">
+            <button type="submit" disabled={sending || !input.trim()} aria-label="Send message" className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-violet-200 bg-violet-100 text-violet-800 shadow-lg shadow-violet-300/20 transition hover:scale-105 hover:bg-violet-200 disabled:opacity-50 disabled:hover:scale-100">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="h-5 w-5"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7Z" /></svg>
             </button>
           </form>
