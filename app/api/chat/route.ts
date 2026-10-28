@@ -1,29 +1,12 @@
 export const runtime = "nodejs";
 
-// Every free OpenRouter model available right now (":free" suffix = $0).
+// Groq free-tier models (dedicated inference, $0).
 // The route tries the requested model first, then falls through the rest,
 // so the chat keeps working even when one model is busy or down.
+// Using Groq's OpenAI-compatible endpoint: https://api.groq.com/openai/v1/chat/completions
 export const FREE_MODELS = [
-  "z-ai/glm-5.2:free",
-  "google/gemma-4-31b-it:free",
-  "google/gemma-4-26b-a4b-it:free",
-  "nvidia/nemotron-3-ultra-550b-a55b:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "qwen/qwen3.8-27b:free",
-  "cohere/north-mini-code:free",
-  "thinkingmachines/inkling:free",
-  "thinkingmachines/inkling-small:free",
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  "nvidia/nemotron-3.5-lightning:free",
-  "poolside/laguna-s-2.1:free",
-  "poolside/laguna-xs-2.1:free",
-  "nex-agi/nex-n2.5-pro:free",
-  "nex-agi/nex-n2.5-mini:free",
-  "liquid/lfm-2.5-2.6b:free",
-  "inclusionai/ling-3.0-flash-fin:free",
-  "inclusionai/ling-3.0-flash-sante:free",
-  "dots-studio/dots-3-note-preview:free",
-  "nvidia/nemotron-3.5-content-safety:free",
+  "openai/gpt-oss-20b", // free, 1000 tps, 131K context
+  "llama-3.1-8b-instant", // free, 560 tps, 131K context
 ];
 
 const SYSTEM_PROMPT = `You are Rolly AI, the warm, knowledgeable portfolio assistant and client-facing advocate for Rolly Paredes. Help visitors understand who Rolly is, what he can do for their business, and how to start a conversation with him.
@@ -88,9 +71,9 @@ SAFETY AND PRIVACY
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
 export async function POST(req: Request) {
-  const apiKey = process.env.OPENROUTER_API_KEY ?? "";
+  const apiKey = process.env.GROQ_API_KEY ?? "";
   if (!apiKey) {
-    console.error("[chat] OPENROUTER_API_KEY is not set.");
+    console.error("[chat] GROQ_API_KEY is not set.");
     return Response.json(
       { error: "Rolly AI is warming up right now — please try again in a few minutes! 🤖" },
       { status: 500 }
@@ -121,16 +104,15 @@ export async function POST(req: Request) {
 
   for (const model of order) {
     try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": origin,
-          "X-Title": "Rolly Paredes Portfolio",
         },
         body: JSON.stringify({
           model,
+          stream: true,
           messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
           temperature: 0.7,
           max_tokens: 600,
@@ -140,13 +122,56 @@ export async function POST(req: Request) {
         lastError = `model ${model} returned HTTP ${res.status}`;
         continue;
       }
-      const data = await res.json();
-      const reply = data?.choices?.[0]?.message?.content?.trim();
-      if (!reply) {
-        lastError = `model ${model} returned an empty reply`;
-        continue;
-      }
-      return Response.json({ reply, model });
+      // Stream Groq's SSE deltas to the client as plain text chunks.
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            const reader = res.body?.getReader();
+            if (!reader) {
+              controller.close();
+              return;
+            }
+            const decoder = new TextDecoder();
+            let buffer = "";
+            for (;;) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
+              const parts = buffer.split("\n\n");
+              buffer = parts.pop() ?? "";
+              for (const part of parts) {
+                const dataLine = part.split("\n").find((line) =>
+                  line.startsWith("data: ")
+                );
+                if (!dataLine) continue;
+                const data = dataLine.slice(6);
+                if (data === "[DONE]") continue;
+                try {
+                  const json = JSON.parse(data);
+                  const delta = json?.choices?.[0]?.delta?.content;
+                  if (typeof delta === "string" && delta.length > 0) {
+                    controller.enqueue(encoder.encode(delta));
+                  }
+                } catch {
+                  // ignore malformed SSE lines
+                }
+              }
+            }
+          } catch (err) {
+            controller.error(err);
+          } finally {
+            controller.close();
+          }
+        },
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache",
+        },
+      });
     } catch (err) {
       lastError = err instanceof Error ? err.message : "network error";
     }

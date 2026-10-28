@@ -1,5 +1,7 @@
 export const runtime = "nodejs";
 
+import { ElevenLabsClient, ElevenLabsError } from "@elevenlabs/elevenlabs-js";
+
 const MAX_TEXT_LENGTH = 5000;
 const DEFAULT_FREE_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
@@ -29,43 +31,40 @@ export async function POST(req: Request) {
 
   const voiceId = process.env.ELEVENLABS_VOICE_ID || DEFAULT_FREE_VOICE_ID;
   try {
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_22050_32`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": apiKey,
-          "Content-Type": "application/json",
-          Accept: "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text,
-          model_id: "eleven_flash_v2_5",
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-          },
-        }),
-        signal: AbortSignal.timeout(20_000),
+    const client = new ElevenLabsClient({ apiKey });
+    const stream = await client.textToSpeech.convert(voiceId, {
+      text,
+      modelId: "eleven_flash_v2_5",
+      outputFormat: "mp3_22050_32",
+      voiceSettings: {
+        stability: 0.5,
+        similarityBoost: 0.75,
       },
-    );
+    }, { timeoutInSeconds: 20 });
 
-    if (!response.ok) {
-      console.error(`[voice] ElevenLabs returned HTTP ${response.status}.`);
-      return Response.json(
-        { error: `ElevenLabs could not generate speech (HTTP ${response.status}). Check the API key, voice access, and remaining plan quota.` },
-        { status: 502 },
-      );
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of stream as unknown as AsyncIterable<Uint8Array>) {
+      chunks.push(chunk);
     }
+    const buffer = Buffer.concat(chunks);
 
-    return new Response(await response.arrayBuffer(), {
+    return new Response(buffer, {
       headers: {
-        "Content-Type": response.headers.get("content-type") ?? "audio/mpeg",
+        "Content-Type": "audio/mpeg",
         "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (error) {
+    if (error instanceof ElevenLabsError) {
+      const status = error.statusCode ?? 502;
+      const message =
+        status === 401
+          ? "ElevenLabs could not generate speech (HTTP 401). Check the API key, voice access, and remaining plan quota."
+          : `ElevenLabs could not generate speech (HTTP ${status}). Check the API key, voice access, and remaining plan quota.`;
+      console.error(`[voice] ElevenLabs returned HTTP ${status}.`);
+      return Response.json({ error: message }, { status: 502 });
+    }
     const timedOut = error instanceof Error && error.name === "TimeoutError";
     console.error(`[voice] ElevenLabs request ${timedOut ? "timed out" : "failed"}.`);
     return Response.json(

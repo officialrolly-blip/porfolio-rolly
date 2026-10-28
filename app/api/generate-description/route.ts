@@ -4,12 +4,8 @@ import { isAdminAuthorized } from "@/lib/projects";
 export const runtime = "nodejs";
 
 const PREFERRED_ORDER = [
-  "google/gemma-4-31b-it:free",
-  "google/gemma-4-26b-a4b-it:free",
-  "z-ai/glm-5.2:free",
-  "qwen/qwen3.8-27b:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "openai/gpt-oss-20b",
+  "llama-3.1-8b-instant",
 ];
 
 function modelOrder() {
@@ -18,24 +14,22 @@ function modelOrder() {
   return [...preferred, ...rest];
 }
 
-async function callOpenRouter(prompt: string, system: string) {
-  const apiKey = process.env.OPENROUTER_API_KEY ?? "";
+async function callGroq(prompt: string, system: string) {
+  const apiKey = process.env.GROQ_API_KEY ?? "";
   if (!apiKey) {
     throw new Error(
-      "OPENROUTER_API_KEY is not set. Add it to .env.local (or Vercel env vars) and restart the dev server."
+      "GROQ_API_KEY is not set. Add it to .env.local (or Vercel env vars) and restart the dev server."
     );
   }
   const attempts: string[] = [];
   let lastError = "unknown error";
   for (const model of modelOrder()) {
     try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "http://localhost:3000",
-          "X-Title": "Rolly Paredes Portfolio Admin",
         },
         body: JSON.stringify({
           model,
@@ -53,10 +47,7 @@ async function callOpenRouter(prompt: string, system: string) {
         // is invalid/revoked — no point trying the other 25 models.
         if (res.status === 401 || res.status === 403) {
           throw new Error(
-            "Your OpenRouter API key was rejected (invalid, revoked, or no credits). " +
-            "Get a fresh free key at https://openrouter.ai/keys, put it in .env.local as OPENROUTER_API_KEY, and restart the dev server. " +
-            `OpenRouter said: ${text.slice(0, 160)}`
-          );
+            "Your Groq API key was rejected (invalid, revoked, or no credits). " +            "Get a fresh free key at https://console.groq.com/keys, put it in .env.local as GROQ_API_KEY, and restart the dev server. " +            `Groq said: ${text.slice(0, 160)}`          );
         }
         lastError = `model ${model} -> HTTP ${res.status} ${text.slice(0, 160)}`;
         attempts.push(lastError);
@@ -107,7 +98,7 @@ export async function POST(req: Request) {
         ? `Write a warm, confident first-person description for a video introduction titled "${title}" — a short self-intro video by Rolly Paredes (Social Media Manager, Graphic Artist, Full-Stack Developer). Use "I" statements. 1-2 sentences, max 40 words.`
         : `Write a portfolio description for a ${category === "social" ? "social media" : "graphic design"} project named "${title}". Focus areas/tags: ${tags.join(", ") || "creative work"}. Focus on results and creative problem-solving.`;
   try {
-    const { text, model } = await callOpenRouter(prompt, system);
+    const { text, model } = await callGroq(prompt, system);
     return Response.json({ description: text, model });
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "AI generation failed." }, { status: 502 });

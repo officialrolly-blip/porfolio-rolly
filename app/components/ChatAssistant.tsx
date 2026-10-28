@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { AuiProvider, AuiConfig } from "@assistant-ui/store";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -304,23 +305,46 @@ export default function ChatAssistant() {
   async function send(text: string) {
     const clean = text.trim();
     if (!clean || sending) return;
-    const next = [...messages, { role: "user" as const, content: clean }];
+    const userMsg = { role: "user" as const, content: clean };
+    const next = [...messages, userMsg];
     setMessages(next);
     setInput("");
     setSending(true);
+    let assistantContent = "";
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "text/plain" },
         body: JSON.stringify({
           model: "auto",
+          stream: true,
           messages: next.slice(-12).map((m) => ({ role: m.role, content: m.content })),
         }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.reply) throw new Error(data.error ?? "Send failed");
-      setMessages([...next, { role: "assistant", content: data.reply }]);
-      void speak(data.reply);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Send failed");
+      }
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body.");
+      const decoder = new TextDecoder();
+      setMessages([...next, { role: "assistant", content: "" }]);
+      let lastUpdate = 0;
+      const flush = () => {
+        setMessages([...next, { role: "assistant", content: assistantContent }]);
+      };
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        assistantContent += decoder.decode(value, { stream: true });
+        const now = Date.now();
+        if (now - lastUpdate > 40) {
+          lastUpdate = now;
+          flush();
+        }
+      }
+      flush();
+      void speak(assistantContent);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Sorry, something went wrong.";
       setMessages([...next, { role: "assistant", content: msg }]);
@@ -330,7 +354,7 @@ export default function ChatAssistant() {
   }
 
   return (
-    <>
+    <AuiProvider config={AuiConfig({})}>
       {!open && (
         <>
           {nudge && (
@@ -447,6 +471,6 @@ export default function ChatAssistant() {
           </form>
         </div>
       )}
-    </>
+    </AuiProvider>
   );
 }

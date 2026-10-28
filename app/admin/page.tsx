@@ -95,7 +95,7 @@ function AdminInner() {
         <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm leading-6">
           <p className="font-bold text-amber-700 dark:text-amber-300">AI needs attention</p>
           <p className="mt-1 text-zinc-600 dark:text-zinc-300">{aiError}</p>
-          <p className="mt-1 text-xs text-zinc-500">Fix: add OPENROUTER_API_KEY to .env.local (and Vercel env vars), then restart. You can still write manually and publish.</p>
+          <p className="mt-1 text-xs text-zinc-500">Fix: add GROQ_API_KEY to .env.local (and Vercel env vars), then restart. You can still write manually and publish.</p>
         </div>
       )}
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[420px_1fr]">
