@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useRef, useState } from "react";
 
-type Props = { src: string; poster?: string; title?: string; className?: string };
+type Props = { src: string; poster?: string; title?: string; className?: string; autoPlay?: boolean };
 
 function fmt(s: number) {
   if (!Number.isFinite(s) || s < 0) return "0:00";
@@ -10,11 +10,11 @@ function fmt(s: number) {
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
-export default function SecureVideo({ src, poster, title, className = "" }: Props) {
+export default function SecureVideo({ src, poster, title, className = "", autoPlay = false }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(autoPlay);
   const [volume, setVolume] = useState(1);
   const [time, setTime] = useState(0);
   const [dur, setDur] = useState(0);
@@ -59,7 +59,7 @@ export default function SecureVideo({ src, poster, title, className = "" }: Prop
   return (
     <div ref={wrapRef} onContextMenu={(e) => e.preventDefault()} className={"group relative w-full select-none overflow-hidden bg-black " + className}>
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-      <video ref={videoRef} src={src} poster={poster} preload="metadata" playsInline controls={false} controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} onClick={toggle} onDoubleClick={goFullscreen} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)} onVolumeChange={(e) => { setMuted(e.currentTarget.muted); setVolume(e.currentTarget.volume); }} onLoadedMetadata={(e) => { setDur(e.currentTarget.duration || 0); setMuted(e.currentTarget.muted); setVolume(e.currentTarget.volume ?? 1); }} className="aspect-video w-full object-contain" />
+      <video ref={videoRef} src={src} poster={poster} preload="metadata" autoPlay={autoPlay} muted={autoPlay} playsInline controls={false} controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} onClick={toggle} onDoubleClick={goFullscreen} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)} onVolumeChange={(e) => { setMuted(e.currentTarget.muted); setVolume(e.currentTarget.volume); }} onLoadedMetadata={(e) => { setDur(e.currentTarget.duration || 0); setMuted(e.currentTarget.muted); setVolume(e.currentTarget.volume ?? 1); }} className="aspect-video w-full object-contain" />
       <span className="pointer-events-none absolute top-3 right-3 z-20 inline-flex items-center rounded-full bg-black/60 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur">Streaming only</span>
       {!playing && (
         <button type="button" onClick={(e) => { e.stopPropagation(); toggle(); }} aria-label={title ? `Play: ${title}` : "Play video"} className="pointer-events-auto absolute inset-x-0 top-0 bottom-16 z-10 grid cursor-pointer place-items-center bg-black/40 transition hover:bg-black/30">
