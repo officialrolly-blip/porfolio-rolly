@@ -434,7 +434,9 @@ export default function ChatAssistant() {
                 </div>
               ) : (
                 <div key={i} className="flex justify-start">
-                  <div className="min-w-0 max-w-full"><AssistantReply text={m.content} /></div>
+                  <div className="min-w-0 max-w-[90%] rounded-2xl rounded-bl-md border border-white/80 bg-white/70 px-3.5 py-2.5 shadow-lg shadow-violet-950/5 backdrop-blur-md">
+                    <AssistantReply text={m.content} />
+                  </div>
                 </div>
               )
             ))}

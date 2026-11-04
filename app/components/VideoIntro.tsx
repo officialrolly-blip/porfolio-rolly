@@ -47,7 +47,7 @@ export default function VideoIntro() {
         <div className="mt-5 grid items-center gap-6 lg:grid-cols-2">
           <div className={`${rise("[transition-delay:100ms]")} relative overflow-hidden rounded-3xl border border-white/25 bg-black/90 shadow backdrop-blur-xl dark:border-white/15`}>
             {intro?.videoUrl ? (
-              <SecureVideo key={intro.id} src={intro.videoUrl} poster={intro.thumbnailUrl ?? undefined} title={intro.title} autoPlay />
+              <SecureVideo key={intro.id} src={intro.videoUrl} poster={intro.thumbnailUrl ?? undefined} title={intro.title} />
             ) : (
               <div className="grid aspect-video w-full place-items-center bg-gradient-to-br from-violet-500/20 via-fuchsia-500/15 to-cyan-400/20 p-8 text-center font-mono text-xs text-zinc-500 dark:text-zinc-400">
                 {intro === undefined ? "Loading intro…" : "No intro video yet — publish one from the Video Intro tab in admin."}
