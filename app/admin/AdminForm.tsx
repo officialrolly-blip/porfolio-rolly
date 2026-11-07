@@ -53,6 +53,8 @@ export default function AdminForm(props: Props) {
   const [socialCaptureBusy, setSocialCaptureBusy] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
   const [videoBusy, setVideoBusy] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [videoUploadSuccess, setVideoUploadSuccess] = useState(false);
   const previewUrls = useRef(new Set<string>());
   const headers = { "Content-Type": "application/json", "x-admin-password": password };
   const label = TABS.find((t) => t.id === tab)?.label ?? tab;
@@ -357,8 +359,9 @@ export default function AdminForm(props: Props) {
 
   async function handleVideo(f: File | null) {
     if (!f) return;
-    if (!f.type.startsWith("video/")) {
-      props.setNotice("That file is not a video — pick an MP4, WebM, or MOV file.");
+    const videoExtension = /\.(3g2|3gp|amv|asf|avi|divx|f4v|flv|m2ts|m2v|m4v|mkv|mov|mp2|mp4|mpe|mpeg|mpg|mpv|mts|mxf|nsv|ogv|qt|rm|rmvb|roq|ts|vob|webm|wmv|yuv)$/i;
+    if (!f.type.startsWith("video/") && !videoExtension.test(f.name)) {
+      props.setNotice("Choose a video file in a supported video format.");
       return;
     }
     if (f.size > 100 * 1024 * 1024) {
@@ -366,25 +369,32 @@ export default function AdminForm(props: Props) {
       return;
     }
     setVideoBusy(true);
+    setVideoProgress(0);
+    setVideoUploadSuccess(false);
     setVideoUrl("");
     props.setNotice("Uploading video to ImageKit...");
     try {
       const auth = await imagekitAuth();
       const result = await upload({
         file: f,
-        fileName: `intro-${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]+/g, "-")}`,
-        folder: "/video-intros",
+        fileName: `${tab === "reels" ? "reel" : "intro"}-${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]+/g, "-")}`,
+        folder: tab === "reels" ? "/reels-ads" : "/video-intros",
         ...auth,
         onProgress: (e) => {
           const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+          setVideoProgress(pct);
           props.setNotice(`Uploading video to ImageKit... ${pct}%`);
         },
       });
       if (!result.url) throw new Error("ImageKit did not return a URL for this video.");
       setVideoUrl(result.url);
-      props.setNotice("Video uploaded to ImageKit - now click Generate description.");
+      setVideoProgress(100);
+      setVideoUploadSuccess(true);
+      props.setNotice("Video uploaded successfully to ImageKit. Preview it below.");
     } catch (err) {
       props.setNotice(uploadError(err));
+      setVideoProgress(0);
+      setVideoUploadSuccess(false);
     }
     setVideoBusy(false);
   }
@@ -403,12 +413,12 @@ export default function AdminForm(props: Props) {
       props.setNotice("Retry or remove failed gallery images before publishing.");
       return;
     }
-    if (tab !== "dev" && tab !== "video" && tab !== "design" && !imageUrl) {
+    if (tab !== "dev" && tab !== "video" && tab !== "reels" && tab !== "design" && !imageUrl) {
       props.setNotice("Upload an image first.");
       return;
     }
-    if (tab === "video" && !videoUrl) {
-      props.setNotice("Upload your intro video first.");
+    if ((tab === "video" || tab === "reels") && !videoUrl) {
+      props.setNotice(tab === "reels" ? "Upload your Reel or ad video first." : "Upload your intro video first.");
       return;
     }
     if (tab === "dev" && !url.trim()) {
@@ -430,7 +440,7 @@ export default function AdminForm(props: Props) {
           description: description.trim(),
           tags: tab === "dev" ? techStack : tags.split(",").map((s) => s.trim()).filter(Boolean),
           metric: metric.trim() || (tab === "dev" ? "Live" : "New"),
-          imageUrl: tab === "design" ? designGalleryUrls[0] ?? null : tab === "dev" ? null : imageUrl || null,
+          imageUrl: tab === "design" ? designGalleryUrls[0] ?? null : tab === "dev" || tab === "video" || tab === "reels" ? null : imageUrl || null,
           galleryUrls: tab === "design" ? designGalleryUrls : [],
           url: tab === "dev" ? pageUrl : null,
           techStack: tab === "dev" ? techStack : [],
@@ -519,23 +529,68 @@ export default function AdminForm(props: Props) {
         </span>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Project title" className={inputCls} />
       </label>
-      {tab === "video" ? (
+      {tab === "video" || tab === "reels" ? (
         <div className="space-y-5">
           <div>
-            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Intro video (uploads to ImageKit)</span>
+            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">
+              {tab === "reels" ? "Reel or ad video (uploads to ImageKit)" : "Intro video (uploads to ImageKit)"}
+            </span>
             <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-zinc-50 px-4 py-8 text-center text-sm transition hover:bg-zinc-100 dark:bg-black/20">
-              <input type="file" accept="video/*" className="hidden" onChange={(e) => handleVideo(e.target.files?.[0] ?? null)} />
+              <input
+                type="file"
+                accept="video/*,.3g2,.3gp,.amv,.asf,.avi,.divx,.f4v,.flv,.m2ts,.m2v,.m4v,.mkv,.mov,.mp2,.mp4,.mpe,.mpeg,.mpg,.mpv,.mts,.mxf,.nsv,.ogv,.qt,.rm,.rmvb,.roq,.ts,.vob,.webm,.wmv,.yuv"
+                className="hidden"
+                onChange={(e) => handleVideo(e.target.files?.[0] ?? null)}
+              />
               <span className="font-bold">{videoBusy ? "Uploading..." : videoUrl ? "Replace video" : "Click to upload video"}</span>
-              <span className="text-xs opacity-70">MP4 / WebM / MOV up to 100MB</span>
+              <span className="text-xs opacity-70">Any video format up to 100MB</span>
             </label>
-            {videoUrl ? (
-              <div onContextMenu={(e) => e.preventDefault()}>
-                <SecureVideo src={videoUrl} title={title || "Intro preview"} className="mt-3 overflow-hidden rounded-2xl border border-zinc-200" />
+            {videoBusy && (
+              <div className="mt-3 rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/5 p-4" role="status" aria-live="polite">
+                <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold">
+                  <span className="text-zinc-700 dark:text-zinc-200">Uploading video to ImageKit...</span>
+                  <span className="tabular-nums text-fuchsia-600 dark:text-fuchsia-300">{videoProgress}%</span>
+                </div>
+                <div
+                  className="h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10"
+                  role="progressbar"
+                  aria-label="Video upload progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={videoProgress}
+                >
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 transition-[width] duration-200 ease-out"
+                    style={{ width: `${videoProgress}%` }}
+                  />
+                </div>
               </div>
+            )}
+            {videoUrl ? (
+              <>
+                {videoUploadSuccess && (
+                  <p role="status" className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                    Video uploaded successfully to ImageKit. Preview your video below.
+                  </p>
+                )}
+                <div onContextMenu={(e) => e.preventDefault()}>
+                  <SecureVideo src={videoUrl} title={title || (tab === "reels" ? "Reel or ad preview" : "Intro preview")} className="mt-3 overflow-hidden rounded-2xl border border-zinc-200" />
+                </div>
+              </>
             ) : (
-              <p className="mt-2 text-[11px] leading-5 text-zinc-500">No video yet — upload one and it auto-saves to ImageKit, then shows in the Video Introduction section.</p>
+              <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+                {tab === "reels"
+                  ? "No video yet — upload your clip and it will be saved to ImageKit and shown in this project tab."
+                  : "No video yet — upload one and it auto-saves to ImageKit, then shows in the Video Introduction section."}
+              </p>
             )}
           </div>
+          {tab === "reels" && (
+            <label className="block">
+              <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Tags</span>
+              <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="TikTok, Facebook Reels, Ads" className={inputCls} />
+            </label>
+          )}
         </div>
       ) : tab === "dev" ? (
         <div className="space-y-5">

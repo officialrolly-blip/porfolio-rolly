@@ -19,7 +19,7 @@ function AdminInner() {
 
   useEffect(() => {
     const t = search.get("tab");
-    if (t === "social" || t === "design" || t === "dev") setTab(t);
+    if (t === "social" || t === "reels" || t === "design" || t === "dev" || t === "video") setTab(t);
   }, [search]);
 
   useEffect(() => {
@@ -63,6 +63,7 @@ function AdminInner() {
   const visible = projects.filter((p) => p.category === tab);
   const counts = {
     social: projects.filter((p) => p.category === "social").length,
+    reels: projects.filter((p) => p.category === "reels").length,
     design: projects.filter((p) => p.category === "design").length,
     dev: projects.filter((p) => p.category === "dev").length,
     video: projects.filter((p) => p.category === "video").length,
@@ -100,7 +101,7 @@ function AdminInner() {
       )}
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[420px_1fr]">
         <section className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-xl sm:p-7 dark:border-white/10 dark:bg-zinc-950">
-          <Step n="1" title={tab === "dev" ? "Project details" : tab === "video" ? "Title + video" : tab === "design" ? "Title + gallery" : "Title + image"} />
+          <Step n="1" title={tab === "dev" ? "Project details" : tab === "video" || tab === "reels" ? "Title + video" : tab === "design" ? "Title + gallery" : "Title + image"} />
           <AdminForm tab={tab} password={password} setNotice={setNotice} setAiError={setAiError} onPublished={(p) => setProjects((x) => [p, ...x])} />
         </section>
         <section className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-xl sm:p-7 dark:border-white/10 dark:bg-zinc-950">

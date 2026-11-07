@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Image as IKImage } from "@imagekit/next";
 import { isImageKitSrc } from "@/lib/imagekit";
-type TabId = "social" | "design" | "dev";
+import SecureVideo from "./SecureVideo";
+type TabId = "social" | "reels" | "design" | "dev";
 type CardProps = { m: string; mCls: string; t: string; d: string; tags: string[]; top: ReactNode; link?: string | null };
 function Card({ m, mCls, t, d, tags, top, link }: CardProps) {
   const inner = (
@@ -36,7 +37,7 @@ type P = {
   id: string; category: TabId; title: string; description: string;
   tags: string[]; metric: string; imageUrl: string | null;
   galleryUrls?: string[];
-  url?: string | null; thumbnailUrl?: string | null;
+  url?: string | null; thumbnailUrl?: string | null; videoUrl?: string | null;
 };
 
 function useProjects() {
@@ -290,6 +291,45 @@ function SocialGrid({ items }: { items: P[] | null }) {
   );
 }
 
+function ReelsGrid({ items }: { items: P[] | null }) {
+  if (items === null) return <SkeletonGrid />;
+  const live = items.filter((p) => p.category === "reels");
+  return (
+    <div>
+      <h3 className="text-xl font-bold text-zinc-900 dark:text-white">TikTok / Facebook Reels &amp; Ads</h3>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Short-form video and ad creative made to capture attention and drive results.</p>
+      <div className="mt-6 grid gap-5 md:grid-cols-3">
+        {live.length === 0 ? (
+          <p className="rounded-2xl border border-white/20 bg-white/40 p-5 text-sm text-zinc-500 dark:bg-white/5">No works yet — check back soon.</p>
+        ) : (
+          live.map((c) => (
+            <Card
+              key={c.id}
+              m={c.metric || "New"}
+              mCls="bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-300"
+              t={c.title}
+              d={c.description}
+              tags={c.tags}
+              top={
+                <div>
+                  <BrowserBar />
+                  {c.videoUrl ? (
+                    <SecureVideo src={c.videoUrl} poster={c.thumbnailUrl ?? undefined} title={c.title} />
+                  ) : c.imageUrl ? (
+                    <Img src={c.imageUrl} alt={c.title} />
+                  ) : (
+                    <div className="flex h-44 items-center justify-center bg-gradient-to-br from-violet-500/30 via-fuchsia-500/25 to-cyan-400/25 font-mono text-xs text-zinc-600 dark:text-zinc-300">Reels &amp; ads preview</div>
+                  )}
+                </div>
+              }
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DesignGrid({ items }: { items: P[] | null }) {
   const [selectedGallery, setSelectedGallery] = useState<{ title: string; images: string[] } | null>(null);
   const closeGallery = useCallback(() => setSelectedGallery(null), []);
@@ -395,6 +435,7 @@ export default function Projects() {
   const rise = (d: string) => `transition-all duration-700 ease-out ${show ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"} ${d}`;
   const tabs = [
     { id: "social" as TabId, tag: "SM", label: "Social Media" },
+    { id: "reels" as TabId, tag: "REELS", label: "Tiktok/Fb Reels and Ads" },
     { id: "design" as TabId, tag: "GD", label: "Graphic Design" },
     { id: "dev" as TabId, tag: "DEV", label: "Full-Stack" },
   ];
@@ -414,7 +455,7 @@ export default function Projects() {
           Selected <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-cyan-500 bg-clip-text text-transparent">work</span>
         </h2>
         <p className={`${rise("[transition-delay:200ms]")} mt-3 max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-400`}>
-          Explore selected work across social media, design, and development — each project reflects real results and creative problem-solving.
+          Explore selected work across social media, short-form video, design, and development — each project reflects real results and creative problem-solving.
         </p>
         <div className={`${rise("[transition-delay:250ms]")} mt-8 flex flex-wrap gap-2`}>
           {tabs.map((t) => (
@@ -439,6 +480,7 @@ export default function Projects() {
           ) : (
             <>
               {tab === "social" && <SocialGrid items={items} />}
+              {tab === "reels" && <ReelsGrid items={items} />}
               {tab === "design" && <DesignGrid items={items} />}
               {tab === "dev" && <DevGrid items={items} />}
             </>

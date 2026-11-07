@@ -96,6 +96,8 @@ export async function POST(req: Request) {
       ? `Write a portfolio description for a full-stack project named "${title}". Tech stack: ${techStack.join(", ") || "modern web stack"}. ${url ? `Live URL: ${url}.` : ""} Focus on what was built and the outcome.`
       : category === "video"
         ? `Write a warm, confident first-person description for a video introduction titled "${title}" — a short self-intro video by Rolly Paredes (Social Media Manager, Graphic Artist, Full-Stack Developer). Use "I" statements. 1-2 sentences, max 40 words.`
+        : category === "reels"
+          ? `Write a portfolio description for a TikTok or Facebook Reels video or ad named "${title}". Focus areas/tags: ${tags.join(", ") || "short-form video and advertising"}. Focus on the creative hook, audience engagement, and campaign results.`
         : `Write a portfolio description for a ${category === "social" ? "social media" : "graphic design"} project named "${title}". Focus areas/tags: ${tags.join(", ") || "creative work"}. Focus on results and creative problem-solving.`;
   try {
     const { text, model } = await callGroq(prompt, system);

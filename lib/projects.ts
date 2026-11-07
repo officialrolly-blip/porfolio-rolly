@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-export type ProjectCategory = "social" | "design" | "dev" | "video";
+export type ProjectCategory = "social" | "reels" | "design" | "dev" | "video";
 
 export type ProjectItem = {
   id: string;

@@ -18,6 +18,9 @@ export async function POST(req: Request) {
   if (!body.title || !isProjectCategory(body.category)) {
     return Response.json({ error: "Title and category are required." }, { status: 400 });
   }
+  if (body.category === "reels" && (typeof body.videoUrl !== "string" || !body.videoUrl.trim())) {
+    return Response.json({ error: "A video URL is required for Reels and ads projects." }, { status: 400 });
+  }
   if (body.galleryUrls !== undefined && (
     !Array.isArray(body.galleryUrls) ||
     !body.galleryUrls.every((url) => typeof url === "string" && url.trim() !== "")
@@ -52,7 +55,7 @@ export async function POST(req: Request) {
 }
 
 function isProjectCategory(value: unknown): value is ProjectItem["category"] {
-  return value === "social" || value === "design" || value === "dev" || value === "video";
+  return value === "social" || value === "reels" || value === "design" || value === "dev" || value === "video";
 }
 
 export async function DELETE(req: Request) {
