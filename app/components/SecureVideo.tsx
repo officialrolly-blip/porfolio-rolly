@@ -18,12 +18,22 @@ export default function SecureVideo({ src, poster, title, className = "", autoPl
   const [volume, setVolume] = useState(1);
   const [time, setTime] = useState(0);
   const [dur, setDur] = useState(0);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const toggle = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
     if (v.paused) v.play().catch(() => {});
     else v.pause();
   }, []);
+  const copyVideoLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(new URL(src, window.location.href).toString());
+      setCopyState("copied");
+    } catch (error) {
+      console.error("Failed to copy video link", error);
+      setCopyState("error");
+    }
+  }, [src]);
   const onSeek = useCallback((val: number) => {
     const v = videoRef.current;
     if (!v) return;
@@ -88,10 +98,22 @@ export default function SecureVideo({ src, poster, title, className = "", autoPl
           </button>
           <input type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume} onChange={(e) => onVolume(Number(e.target.value))} onClick={(e) => e.stopPropagation()} aria-label="Volume" className="hidden h-1 w-16 cursor-pointer accent-fuchsia-500 sm:block" />
         </div>
+        <button type="button" onClick={(e) => { e.stopPropagation(); void copyVideoLink(); }} aria-label="Copy video link" title="Copy video link" className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full bg-white/15 backdrop-blur transition hover:bg-white/30">
+          {copyState === "copied" ? (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden><path d="m5 12 4 4L19 6" /></svg>
+          ) : (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" /></svg>
+          )}
+        </button>
         <button type="button" onClick={(e) => { e.stopPropagation(); goFullscreen(); }} aria-label="Fullscreen" className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full bg-white/15 backdrop-blur transition hover:bg-white/30">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" /></svg>
         </button>
       </div>
+      {copyState !== "idle" && (
+        <span role="status" aria-live="polite" className="absolute right-3 bottom-16 z-30 rounded-lg bg-black/80 px-3 py-1.5 text-xs text-white shadow-lg">
+          {copyState === "copied" ? "Video link copied" : "Could not copy video link"}
+        </span>
+      )}
     </div>
   );
 }
