@@ -23,7 +23,7 @@ export default function AdminList({ tab, visible, loading, load, remove }: {
       </div>
       {visible.length === 0 && (
         <p className="mt-4 rounded-2xl bg-zinc-100 p-5 text-sm text-zinc-500 dark:bg-white/5 dark:text-zinc-400">
-          No works in this tab yet — fill the form on the left and publish your first one.
+          {tab === "certificate" ? "No credentials yet — add your first training or certificate using the form on the left." : "No works in this tab yet — fill the form on the left and publish your first one."}
         </p>
       )}
       <ul className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -43,7 +43,7 @@ export default function AdminList({ tab, visible, loading, load, remove }: {
                     <img
                       key={`${src}-${index}`}
                       src={src}
-                      alt={p.category === "design" ? `${p.title} gallery image ${index + 1}` : ""}
+                      alt={p.category === "design" ? `${p.title} gallery image ${index + 1}` : p.category === "certificate" ? p.title : ""}
                       loading="lazy"
                       className={p.category === "design" && images.length > 1 ? "h-32 w-full object-cover object-top" : "h-32 w-full object-cover object-top"}
                     />
@@ -66,7 +66,7 @@ export default function AdminList({ tab, visible, loading, load, remove }: {
                   {p.description || "No description yet."}
                 </p>
                 <p className="mt-2 truncate font-mono text-[11px] text-zinc-400">
-                  {(p.tags ?? []).join(" · ")}{p.url ? " · " + p.url : ""}
+                  {p.category === "certificate" ? `Credentials: ${p.url ?? "No link"}` : `${(p.tags ?? []).join(" · ")}${p.url ? " · " + p.url : ""}`}
                 </p>
                 <button
                   type="button"

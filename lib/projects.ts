@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-export type ProjectCategory = "social" | "reels" | "design" | "dev" | "video";
+export type ProjectCategory = "social" | "reels" | "design" | "dev" | "video" | "certificate";
 
 export type ProjectItem = {
   id: string;
@@ -12,7 +12,7 @@ export type ProjectItem = {
   metric: string;
   imageUrl: string | null;
   galleryUrls?: string[];
-  // full-stack only
+  // Full-stack project URL or certificate verification URL.
   url?: string | null;
   techStack?: string[];
   thumbnailUrl?: string | null;

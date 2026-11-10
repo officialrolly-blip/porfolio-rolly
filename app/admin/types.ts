@@ -1,4 +1,4 @@
-export type Category = "social" | "reels" | "design" | "dev" | "video";
+export type Category = "social" | "reels" | "design" | "dev" | "video" | "certificate";
 export type ProjectItem = {
   id: string; category: Category; title: string; description: string;
   tags: string[]; metric: string; imageUrl: string | null;
@@ -12,5 +12,6 @@ export const TABS = [
   { id: "design" as Category, tag: "GD", label: "Graphic Design", hint: "Step 1: title + gallery images. Step 2: generate description, review, publish." },
   { id: "dev" as Category, tag: "DEV", label: "Full-Stack", hint: "Step 1: URL + name + stack (thumbnail auto-creates). Step 2: generate description, publish." },
   { id: "video" as Category, tag: "VI", label: "Video Intro", hint: "Step 1: title + video (auto-uploads to ImageKit). Step 2: generate description, review, publish." },
+  { id: "certificate" as Category, tag: "CERT", label: "Trainings & Certificates", hint: "Step 1: title + certificate image + credentials link. Step 2: add a description and publish." },
 ];
 export const inputCls = "h-12 w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-fuchsia-400 focus:bg-white dark:border-white/15 dark:bg-black/40 dark:text-white";

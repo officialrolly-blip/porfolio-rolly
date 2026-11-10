@@ -6,6 +6,7 @@ import { Image as IKImage } from "@imagekit/next";
 import { isImageKitSrc } from "@/lib/imagekit";
 import SecureVideo from "./SecureVideo";
 type TabId = "social" | "reels" | "design" | "dev";
+type ProjectCategory = TabId | "video" | "certificate";
 type CardProps = { m: string; mCls: string; t: string; d: string; tags: string[]; top: ReactNode; link?: string | null };
 function Card({ m, mCls, t, d, tags, top, link }: CardProps) {
   const inner = (
@@ -34,7 +35,7 @@ function Card({ m, mCls, t, d, tags, top, link }: CardProps) {
 }
 
 type P = {
-  id: string; category: TabId; title: string; description: string;
+  id: string; category: ProjectCategory; title: string; description: string;
   tags: string[]; metric: string; imageUrl: string | null;
   galleryUrls?: string[];
   url?: string | null; thumbnailUrl?: string | null; videoUrl?: string | null;

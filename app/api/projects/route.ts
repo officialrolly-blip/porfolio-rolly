@@ -21,6 +21,14 @@ export async function POST(req: Request) {
   if (body.category === "reels" && (typeof body.videoUrl !== "string" || !body.videoUrl.trim())) {
     return Response.json({ error: "A video URL is required for Reels and ads projects." }, { status: 400 });
   }
+  if (body.category === "certificate") {
+    if (typeof body.imageUrl !== "string" || !body.imageUrl.trim()) {
+      return Response.json({ error: "A certificate image is required." }, { status: 400 });
+    }
+    if (!isHttpUrl(body.url)) {
+      return Response.json({ error: "A valid http:// or https:// credentials link is required." }, { status: 400 });
+    }
+  }
   if (body.galleryUrls !== undefined && (
     !Array.isArray(body.galleryUrls) ||
     !body.galleryUrls.every((url) => typeof url === "string" && url.trim() !== "")
@@ -43,7 +51,7 @@ export async function POST(req: Request) {
       ? String(body.imageUrl ?? galleryUrls[0] ?? "") || null
       : body.imageUrl ? String(body.imageUrl) : null,
     galleryUrls,
-    url: body.url ? String(body.url) : null,
+    url: body.url ? String(body.url).trim().slice(0, 2048) : null,
     techStack: Array.isArray(body.techStack) ? body.techStack.map(String).slice(0, 10) : [],
     thumbnailUrl: body.thumbnailUrl ? String(body.thumbnailUrl) : null,
     videoUrl: body.videoUrl ? String(body.videoUrl) : null,
@@ -55,7 +63,17 @@ export async function POST(req: Request) {
 }
 
 function isProjectCategory(value: unknown): value is ProjectItem["category"] {
-  return value === "social" || value === "reels" || value === "design" || value === "dev" || value === "video";
+  return value === "social" || value === "reels" || value === "design" || value === "dev" || value === "video" || value === "certificate";
+}
+
+function isHttpUrl(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export async function DELETE(req: Request) {

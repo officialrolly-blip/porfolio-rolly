@@ -39,6 +39,7 @@ export default function AdminForm(props: Props) {
   const [tags, setTags] = useState("");
   const [metric, setMetric] = useState("");
   const [url, setUrl] = useState("");
+  const [credentialUrl, setCredentialUrl] = useState("");
   const [tech, setTech] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
@@ -101,6 +102,10 @@ export default function AdminForm(props: Props) {
 
   async function handleFile(f: File | null) {
     if (!f) return;
+    if (f.type && !f.type.startsWith("image/")) {
+      props.setNotice("Choose an image file.");
+      return;
+    }
     if (f.size > 5 * 1024 * 1024) {
       props.setNotice("Image must be under 5MB.");
       return;
@@ -425,6 +430,10 @@ export default function AdminForm(props: Props) {
       props.setNotice("Add the project URL first.");
       return;
     }
+    if (tab === "certificate" && !credentialUrl.trim()) {
+      props.setNotice("Add the credentials link first.");
+      return;
+    }
     setBusy("save");
     props.setNotice("Publishing...");
     try {
@@ -438,11 +447,11 @@ export default function AdminForm(props: Props) {
           category: tab,
           title: title.trim(),
           description: description.trim(),
-          tags: tab === "dev" ? techStack : tags.split(",").map((s) => s.trim()).filter(Boolean),
+          tags: tab === "dev" ? techStack : tab === "certificate" ? [] : tags.split(",").map((s) => s.trim()).filter(Boolean),
           metric: metric.trim() || (tab === "dev" ? "Live" : "New"),
           imageUrl: tab === "design" ? designGalleryUrls[0] ?? null : tab === "dev" || tab === "video" || tab === "reels" ? null : imageUrl || null,
           galleryUrls: tab === "design" ? designGalleryUrls : [],
-          url: tab === "dev" ? pageUrl : null,
+          url: tab === "dev" ? pageUrl : tab === "certificate" ? credentialUrl.trim() : null,
           techStack: tab === "dev" ? techStack : [],
           thumbnailUrl: thumbUrl || null,
           videoUrl: videoUrl || null,
@@ -458,6 +467,7 @@ export default function AdminForm(props: Props) {
       setTags("");
       setMetric("");
       setUrl("");
+      setCredentialUrl("");
       setTech("");
       setImageUrl("");
       galleryImages.forEach((image) => {
@@ -472,7 +482,7 @@ export default function AdminForm(props: Props) {
       setSocialCaptureBusy(false);
       setVideoUrl("");
       setVideoBusy(false);
-      props.setNotice("Published - live in Selected work.");
+      props.setNotice(tab === "certificate" ? "Published - live in Trainings & Certificates." : "Published - live in Selected work.");
     } catch (err) {
       props.setNotice(err instanceof Error ? err.message : "Publish failed.");
     }
@@ -522,12 +532,12 @@ export default function AdminForm(props: Props) {
         </div>
       )}
       <form onSubmit={publish} className={"space-y-5 " + (busy === "save" ? "pointer-events-none select-none opacity-70" : "")} aria-busy={busy === "save"}>
-      <p className="text-sm font-bold">New {label} work</p>
+      <p className="text-sm font-bold">New {tab === "certificate" ? "credential" : `${label} work`}</p>
       <label className="block">
         <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">
           {tab === "dev" ? "Project name" : "Title"}
         </span>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Project title" className={inputCls} />
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tab === "certificate" ? "Training or certificate name" : "Project title"} className={inputCls} />
       </label>
       {tab === "video" || tab === "reels" ? (
         <div className="space-y-5">
@@ -736,6 +746,25 @@ export default function AdminForm(props: Props) {
             <p className="text-[11px] leading-5 text-zinc-500">No images added yet. The first image will be the project cover; visitors can click it to browse the full gallery.</p>
           )}
         </div>
+      ) : tab === "certificate" ? (
+        <div className="space-y-5">
+          <div className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Certificate image</span>
+            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fuchsia-400/40 bg-zinc-50 px-4 py-8 text-center text-sm transition hover:bg-zinc-100 dark:bg-black/20">
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
+              <span className="font-bold">{busy === "upload" ? "Uploading..." : imageUrl ? "Replace certificate image" : "Click to upload certificate image"}</span>
+              <span className="text-xs opacity-70">PNG/JPG up to 5MB</span>
+            </label>
+            {(previewLocal || imageUrl) && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={previewLocal || imageUrl} alt="Certificate preview" className="mt-3 max-h-64 w-full rounded-2xl border border-zinc-200 bg-zinc-100 object-contain dark:bg-black/20" />
+            )}
+          </div>
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Credentials link</span>
+            <input value={credentialUrl} onChange={(e) => setCredentialUrl(e.target.value)} placeholder="https://example.com/verify-credentials" inputMode="url" className={inputCls} />
+          </label>
+        </div>
       ) : (
         <div className="space-y-5">
           <div>
@@ -777,13 +806,15 @@ export default function AdminForm(props: Props) {
           </label>
         </div>
       )}
-      <label className="block">
-        <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Metric badge</span>
-        <input value={metric} onChange={(e) => setMetric(e.target.value)} placeholder="e.g. +120% reach" className={inputCls} />
-      </label>
+      {tab !== "certificate" && (
+        <label className="block">
+          <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Metric badge</span>
+          <input value={metric} onChange={(e) => setMetric(e.target.value)} placeholder="e.g. +120% reach" className={inputCls} />
+        </label>
+      )}
       <label className="block">
         <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-zinc-500">Description</span>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder={tab === "video" ? "Click Generate for a 1st-person intro script, or write your own..." : "Click Generate or write your own..."} className={inputCls + " min-h-[120px] resize-y py-3 leading-6"} />
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder={tab === "video" ? "Click Generate for a 1st-person intro script, or write your own..." : tab === "certificate" ? "Describe what you learned or the skills you earned..." : "Click Generate or write your own..."} className={inputCls + " min-h-[120px] resize-y py-3 leading-6"} />
       </label>
       {busy === "save" && (
         <p role="status" className="flex items-center gap-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/10 px-4 py-3 text-sm font-semibold text-zinc-700 dark:text-zinc-200">
@@ -793,7 +824,7 @@ export default function AdminForm(props: Props) {
       )}
       {justPublished && busy === "none" && (
         <p className="flex animate-pulse items-center gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-          <span>✓</span> Published - live in {tab === "video" ? "Video Introduction" : "Selected work"}.
+          <span>✓</span> Published - live in {tab === "video" ? "Video Introduction" : tab === "certificate" ? "Trainings & Certificates" : "Selected work"}.
         </p>
       )}
       <div className="grid gap-2">
@@ -803,7 +834,7 @@ export default function AdminForm(props: Props) {
         </button>
         <button type="submit" disabled={busy !== "none"} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0 dark:bg-white dark:text-zinc-900">
           {busy === "save" && <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-          {busy === "save" ? "Publishing..." : justPublished ? "Published ✓" : "Publish work"}
+          {busy === "save" ? "Publishing..." : justPublished ? "Published ✓" : tab === "certificate" ? "Publish credential" : "Publish work"}
         </button>
       </div>
       {tried && <p className="rounded-xl bg-zinc-100 px-3 py-2 font-mono text-[11px] text-zinc-500">{tried}</p>}
