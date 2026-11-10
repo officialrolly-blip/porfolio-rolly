@@ -12,6 +12,14 @@ type Certificate = {
   url: string;
 };
 
+function getOrganizationHost(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, "") || "Certifying organization";
+  } catch {
+    return "Certifying organization";
+  }
+}
+
 function isCertificate(value: unknown): value is Certificate {
   if (typeof value !== "object" || value === null) return false;
   const item = value as Record<string, unknown>;
@@ -39,6 +47,47 @@ function CertificateImage({ src, title }: { src: string; title: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt={title} loading="lazy" className="h-56 w-full bg-zinc-100 object-contain dark:bg-black/20" />
+  );
+}
+
+function OrganizationBadge({ credentialUrl }: { credentialUrl: string }) {
+  const [logoIndex, setLogoIndex] = useState(0);
+  const host = getOrganizationHost(credentialUrl);
+  const logoUrls = (() => {
+    try {
+      const credentialSite = new URL(credentialUrl);
+      return [
+        `${credentialSite.origin}/favicon.ico`,
+        `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(credentialSite.origin)}&sz=64`,
+        `https://icons.duckduckgo.com/ip3/${credentialSite.hostname}.ico`,
+      ];
+    } catch {
+      return [];
+    }
+  })();
+  const logoUrl = logoUrls[logoIndex];
+
+  return (
+    <span
+      title={`Certifying organization: ${host}`}
+      className="absolute left-3 top-3 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-full border border-white/70 bg-white/95 px-2.5 py-1.5 text-xs font-bold text-zinc-800 shadow-lg backdrop-blur"
+    >
+      {logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoUrl}
+          alt=""
+          aria-hidden="true"
+          onError={() => setLogoIndex((index) => index + 1)}
+          className="h-6 w-6 shrink-0 rounded-full bg-white object-contain"
+        />
+      ) : (
+        <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-violet-100 text-[10px] font-black uppercase text-violet-700">
+          {host.slice(0, 1)}
+        </span>
+      )}
+      <span className="truncate">{host}</span>
+    </span>
   );
 }
 
@@ -99,7 +148,10 @@ export default function TrainingsCertificates() {
           <ul className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {certificates.map((certificate) => (
               <li key={certificate.id} className="flex flex-col overflow-hidden rounded-3xl border border-white/25 bg-white/10 shadow backdrop-blur-xl dark:border-white/15 dark:bg-white/[0.06]">
-                <CertificateImage src={certificate.imageUrl} title={certificate.title} />
+                <div className="relative">
+                  <CertificateImage src={certificate.imageUrl} title={certificate.title} />
+                  <OrganizationBadge credentialUrl={certificate.url} />
+                </div>
                 <div className="flex flex-1 flex-col p-6">
                   <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{certificate.title}</h3>
                   <p className="mt-2 flex-1 whitespace-pre-line text-sm leading-6 text-zinc-600 dark:text-zinc-400">{certificate.description}</p>
