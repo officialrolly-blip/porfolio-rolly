@@ -17,7 +17,8 @@ const profiles: {
     platform: "Spotify",
     title: "Independent Music Artist",
     profileType: "Spotify Artist Profile",
-    description: "Independent artist profile and music portfolio on Spotify.",
+    description:
+      "Full-Stack Developer by profession, creator at heart. Blending technology, music, and community with purpose—one project and one song at a time.",
     href: "https://open.spotify.com/artist/5eShoHgEfjFIB8rwkKj52r",
     accent: "bg-[#1DB954]",
     Icon: SiSpotify,
@@ -27,7 +28,8 @@ const profiles: {
     platform: "Amazon",
     title: "Author",
     profileType: "Amazon Author Profile",
-    description: "Author profile and digital publishing presence on Amazon.",
+    description:
+      "A digital creator, software developer, and music composer from Capiz, Philippines. Now bringing that creative spirit to immersive fiction, including his debut novel, I'm Dating with Dracula's Son.",
     href: "https://www.amazon.com/author/rollyparedes",
     accent: "bg-[#232F3E]",
     Icon: FaAmazon,
